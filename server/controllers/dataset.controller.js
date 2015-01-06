@@ -52,7 +52,7 @@ exports.extractlink = function(req,res) {
  *
  */
 exports.index = function(req, res) {
-
+  console.log('Fetching datasets/');
   // Define WHERE clauses
   var filter = {
     private: false
@@ -78,6 +78,7 @@ exports.index = function(req, res) {
       ] }
     ]
   }).success(function(datasets) {
+    console.log(datasets);
     return res.json(datasets);
   }).error(function(err){
     console.log(err);

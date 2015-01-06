@@ -17,6 +17,8 @@ module.exports = function(app) {
 
   // All other routes should redirect to the index.html
   app.route('/*')
-    .get(errors[404]);
+    .get(function(req,res){
+      return res.json({status: 'not found'});
+    });
 };
 

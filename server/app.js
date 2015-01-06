@@ -25,7 +25,7 @@ var express = require('express'),
     Sequelize = require('sequelize'),
     config = require('./config/environment');
 
-
+console.log(config);
 /**
 *
 * Database settings
@@ -78,6 +78,7 @@ var routes = require('./routes')(app);
 /**
  * Start server
  */
+console.log(config.port);
 server.listen(config.port, config.ip, function () {
   console.log('Express server listening on %d, in %s mode', config.port, app.get('env'));
 });
