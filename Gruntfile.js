@@ -12,7 +12,9 @@ module.exports = function (grunt) {
   // Load grunt tasks automatically, when needed
   require('jit-grunt')(grunt, {
     express: 'grunt-express-server',
-    buildcontrol: 'grunt-build-control'
+    buildcontrol: 'grunt-build-control',
+    useminPrepare: 'grunt-usemin',
+    cdnify: 'grunt-google-cdn'
   });
 
   // Time how long tasks take. Can help when optimizing build times
@@ -24,6 +26,12 @@ module.exports = function (grunt) {
 
     // Project settings
     pkg: grunt.file.readJSON('package.json'),
+
+    yeoman: {
+      // configurable paths
+      //client: require('./bower.json').appPath || 'client',
+      dist: 'dist'
+    },
 
     express: {
       options: {
@@ -103,10 +111,7 @@ module.exports = function (grunt) {
           dot: true,
           src: [
             '.tmp',
-            '<%= yeoman.dist %>/*',
-            '!<%= yeoman.dist %>/.git*',
-            '!<%= yeoman.dist %>/.openshift',
-            '!<%= yeoman.dist %>/Procfile'
+            './client/*'
           ]
         }]
       },
@@ -162,6 +167,140 @@ module.exports = function (grunt) {
       }
     },
 
+    // Automatically inject Bower components into the app
+    wiredep: {
+      target: {
+        src: '<%= yeoman.client %>/index.html',
+        ignorePath: '<%= yeoman.client %>/',
+        exclude: [/bootstrap-sass-official/, /bootstrap.js/, '/json3/', '/es5-shim/', /bootstrap.css/, /font-awesome.css/ ]
+      }
+    },
+
+    // Renames files for browser caching purposes
+    rev: {
+      dist: {
+        files: {
+          src: [
+            '<%= yeoman.dist %>/public/{,*/}*.js',
+            '<%= yeoman.dist %>/public/{,*/}*.css',
+            '<%= yeoman.dist %>/public/assets/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}',
+            '<%= yeoman.dist %>/public/assets/fonts/*'
+          ]
+        }
+      }
+    },
+
+    // Reads HTML for usemin blocks to enable smart builds that automatically
+    // concat, minify and revision files. Creates configurations in memory so
+    // additional tasks can operate on them
+    useminPrepare: {
+      html: ['<%= yeoman.client %>/index.html'],
+      options: {
+        dest: '<%= yeoman.dist %>/public'
+      }
+    },
+
+    // Performs rewrites based on rev and the useminPrepare configuration
+    usemin: {
+      html: ['<%= yeoman.dist %>/public/{,*/}*.html'],
+      css: ['<%= yeoman.dist %>/public/{,*/}*.css'],
+      js: ['<%= yeoman.dist %>/public/{,*/}*.js'],
+      options: {
+        assetsDirs: [
+          '<%= yeoman.dist %>/public',
+          '<%= yeoman.dist %>/public/assets/images'
+        ],
+        // This is so we update image references in our ng-templates
+        patterns: {
+          js: [
+            [/(assets\/images\/.*?\.(?:gif|jpeg|jpg|png|webp|svg))/gm, 'Update the JS to reference our revved images']
+          ]
+        }
+      }
+    },
+    // The following *-min tasks produce minified files in the dist folder
+    imagemin: {
+      dist: {
+        files: [{
+          expand: true,
+          cwd: '<%= yeoman.client %>/assets/images',
+          src: '{,*/}*.{png,jpg,jpeg,gif}',
+          dest: '<%= yeoman.dist %>/public/assets/images'
+        }]
+      }
+    },
+
+    svgmin: {
+      dist: {
+        files: [{
+          expand: true,
+          cwd: '<%= yeoman.client %>/assets/images',
+          src: '{,*/}*.svg',
+          dest: '<%= yeoman.dist %>/public/assets/images'
+        }]
+      }
+    },
+
+    // Allow the use of non-minsafe AngularJS files. Automatically makes it
+    // minsafe compatible so Uglify does not destroy the ng references
+    ngAnnotate: {
+      dist: {
+        files: [{
+          expand: true,
+          cwd: '.tmp/concat',
+          src: '*/**.js',
+          dest: '.tmp/concat'
+        }]
+      }
+    },
+
+
+    // Replace Google CDN references
+    cdnify: {
+      dist: {
+        html: ['<%= yeoman.dist %>/public/*.html']
+      }
+    },
+
+    // Copies remaining files to places other tasks can use
+    copy: {
+      dist: {
+        files: [{
+        //  expand: true,
+        //  dot: true,
+        //  cwd: '<%= yeoman.client %>',
+        //  dest: '<%= yeoman.dist %>/public',
+        //  src: [
+        //    '*.{ico,png,txt}',
+        //    '.htaccess',
+        //    'bower_components/**/*',
+        //    'assets/images/{,*/}*.{webp}',
+        //    'assets/fonts/**/*',
+        //    'index.html'
+        //  ]
+        //},{
+        //  expand: true,
+        //  cwd: '.tmp/images',
+        //  dest: '<%= yeoman.dist %>/public/assets/images',
+        //  src: ['generated/*']
+        }, {
+          expand: true,
+          dest: '<%= yeoman.dist %>',
+          src: [
+            'package.json',
+            'server/**/*'
+          ]
+        }]
+      }
+      //,
+      //styles: {
+      //  expand: true,
+      //  cwd: '<%= yeoman.client %>',
+      //  dest: '.tmp/',
+      //  src: ['{app,components}/**/*.css']
+      //}
+    },
+
     buildcontrol: {
       options: {
         dir: 'dist',
@@ -208,8 +347,7 @@ module.exports = function (grunt) {
         }
       },
       dist: [
-        'imagemin',
-        'svgmin'
+
       ]
     },
 
@@ -294,17 +432,16 @@ module.exports = function (grunt) {
   grunt.registerTask('build', [
     'clean:dist',
     'concurrent:dist',
-    'useminPrepare',
+    //'useminPrepare',
     'autoprefixer',
-    'ngtemplates',
-    'concat',
-    'ngAnnotate',
+    //'concat',
+    //'ngAnnotate',
     'copy:dist',
-    'cdnify',
-    'cssmin',
-    'uglify',
+    //'cdnify',
+    //'cssmin',
+    //'uglify',
     'rev',
-    'usemin'
+    //'usemin'
   ]);
 
   grunt.registerTask('default', [
