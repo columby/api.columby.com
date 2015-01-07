@@ -11,7 +11,7 @@ module.exports = {
   // Server port
   port:     process.env.OPENSHIFT_NODEJS_PORT ||
             process.env.PORT ||
-            8080,
+            8000,
 
   db:{
     uri: process.env.DATABASE_URL

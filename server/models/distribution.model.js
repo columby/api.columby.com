@@ -58,8 +58,7 @@ module.exports = function(sequelize, DataTypes) {
     },{
       classMethods: {
         associate: function(models) {
-          Distribution.belongsTo(models.Dataset, { as: 'dataset' });
-          Distribution.belongsTo(models.File   , { as: 'file' });
+          Distribution.belongsTo(models.File, { as: 'file' });
         }
       }
     }

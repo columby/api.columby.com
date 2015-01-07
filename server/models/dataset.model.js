@@ -55,9 +55,8 @@ module.exports = function(sequelize, DataTypes) {
 
           // A dataset can have multiple distributions
           // One dataset to Many distributions
-          Dataset.hasMany(models.Distribution, {
-            as:'distributions'
-          });
+          Dataset.hasMany(models.Distribution, { as:'distributions' });
+          models.Distribution.belongsTo(Dataset, { as: 'dataset' });
 
           //
           Dataset.belongsTo(models.Account, {
