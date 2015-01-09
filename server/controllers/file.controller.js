@@ -105,7 +105,7 @@ function uploadImage(file,callback){
       return callback(err,null);
     }
 
-    var key = 'styles/' + file.account_id + '/' + file.style.name + '/' + file.filename;
+    var key = '/styles/' + file.account_id + '/' + file.style.name + '/' + file.filename;
       console.log('s3 key: ' + key);
       var params = {
         Bucket: config.aws.bucket,
@@ -207,10 +207,10 @@ exports.show = function(req, res) {
 
       var width = availableStyles[ req.query.style].width;
 
-      s3Endpoint += 'styles/' + file.account_id + '/' + style + '/' + file.filename;
+      s3Endpoint += '/styles/' + file.account_id + '/' + style + '/' + file.filename;
 
     } else {
-      s3Endpoint += 'accounts/' + file.account_id + '/images/' + file.filename;
+      s3Endpoint += '/accounts/' + file.account_id + '/images/' + file.filename;
     }
     console.log('Endpoint for file ' + file.id + ': ' + s3Endpoint);
     // Stream the file to the user

@@ -121,9 +121,11 @@ exports.show = function(req, res) {
 exports.create = function(req, res) {
 
   var d = req.body;
-  //console.log('Creating new dataset: ', req.body);
+
   // Handle tags
-  if (d.tags) { d.tags = d.tags.split(','); }
+  if (d.tags ) {
+    //d.tags = d.tags.split(',');
+  }
 
   // Create a new dataset
   Dataset.create(req.body).success(function(dataset) {
