@@ -92,7 +92,7 @@ function getImage(file, callback) {
   localFile.on('open', function() {
     console.log('Fetching file: ', file.url);
     request(file.url).pipe(localFile).on('close', function(){
-      console.log('localfile', localFile);  
+      console.log('localfile', localFile);
       callback(null, localFile);
     }).on('error', function(err){
       console.log('error', err);
@@ -146,26 +146,34 @@ console.log('Getting image');
     }
 
     if (!err && tmpFile) {
+      console.log('image fetched at ' + tmpFile.path);
+
       // Create a writestream for the derived image
       var u = config.root + '/server/tmp/' + file.id + '_' + file.style.name;
-      console.log('image fetched at ' + tmpFile.path);
+      console.log('Creating writestream: ' + u);
+
       var writeStream = fs.createWriteStream(u);
 
-      gm(config.root + '/server/tmp/' + file.id)
-        .options({imageMagick: true})
-        .resize(file.style.width)
-        .stream(function (err, stdout, stderr) {
-          stdout.pipe(writeStream).on('error', function (err) {
-            console.log(err);
-            callback(err, null);
-          }).on('close', function () {
-            // Delete the tmp source file
-            fs.unlink(config.root + '/server/tmp/'+file.id);
-            console.log('Local derivative created. ');
-            file.source = u;
-            uploadImage(file, callback);
+      writeStream.on('open', function(){
+        gm(config.root + '/server/tmp/' + file.id)
+          .options({imageMagick: true})
+          .resize(file.style.width)
+          .stream(function (err, stdout, stderr) {
+            stdout.pipe(writeStream).on('error', function (err) {
+              console.log(err);
+              callback(err, null);
+            }).on('close', function () {
+              // Delete the tmp source file
+              fs.unlink(config.root + '/server/tmp/'+file.id);
+              console.log('Local derivative created. ');
+              file.source = u;
+              uploadImage(file, callback);
+            });
           });
-        });
+      }).on('error', function(err){
+        console.log('error', err);
+        callback(err, null);
+      });
     }
   });
 }
