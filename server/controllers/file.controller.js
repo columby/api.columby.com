@@ -1,10 +1,9 @@
 'use strict';
 
 /**
- * Module dependencies
  *
- * @type {exports}
- * @private
+ *  Module dependencies
+ *
  */
 var _ = require('lodash'),
     models = require('../models/index'),
