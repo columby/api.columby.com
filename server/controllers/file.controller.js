@@ -15,6 +15,7 @@ var _ = require('lodash'),
     fs = require('fs'),
     gm = require('gm').subClass({ imageMagick: true }),
     request = require('request')
+    config = require('../config/environment/index')
 ;
 
 var s3 = new AWS.S3();
@@ -86,22 +87,29 @@ function createS3Policy(file) {
  * @param callback
  */
 function getImage(file, callback) {
-  var localFile = fs.createWriteStream('server/tmp/' + file.id);
+  var localFile = fs.createWriteStream(config.root + '/server/tmp/' + file.id);
 
   localFile.on('open', function() {
     console.log('Fetching file: ', file.url);
     request(file.url).pipe(localFile).on('close', function(){
+      console.log('localfile', localFile);  
       callback(null, localFile);
     }).on('error', function(err){
+      console.log('error', err);
       callback(err, null);
     });
   });
 }
 
 function uploadImage(file,callback){
+  console.log('upload image file source', typeof(file.source));
+  console.log(file.source);
+
   fs.readFile(file.source, function (err, data) {
+    console.log('reading file');
     if (err) {
-      return callback(err,null);
+      console.log('err', err);
+      //return err;
     }
 
     var key = 'styles/' + file.account_id + '/' + file.style.name + '/' + file.filename;
@@ -130,6 +138,7 @@ function uploadImage(file,callback){
  */
 function createDerivative(file, callback) {
   console.log('Creating a new derivative for: ', file);
+console.log('Getting image');
   // Get remote image and store it locally
   getImage(file, function (err, tmpFile) {
     if (err) {
@@ -138,11 +147,11 @@ function createDerivative(file, callback) {
 
     if (!err && tmpFile) {
       // Create a writestream for the derived image
-      var u = 'server/tmp/' + file.id + '_' + file.style.name;
+      var u = config.root + '/server/tmp/' + file.id + '_' + file.style.name;
       console.log('image fetched at ' + tmpFile.path);
       var writeStream = fs.createWriteStream(u);
 
-      gm('server/tmp/' + file.id)
+      gm(config.root + '/server/tmp/' + file.id)
         .options({imageMagick: true})
         .resize(file.style.width)
         .stream(function (err, stdout, stderr) {
@@ -151,7 +160,7 @@ function createDerivative(file, callback) {
             callback(err, null);
           }).on('close', function () {
             // Delete the tmp source file
-            fs.unlink('server/tmp/'+file.id);
+            fs.unlink(config.root + '/server/tmp/'+file.id);
             console.log('Local derivative created. ');
             file.source = u;
             uploadImage(file, callback);
