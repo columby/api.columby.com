@@ -77,10 +77,10 @@ module.exports = function(app){
     auth.ensureAuthenticated,
     controller.destroy);
 
-  router.post('/:id/addTag',
+  router.post('/:id/tag',
     auth.ensureAuthenticated,
     controller.addTag);
-  router.post('/:id/removeTag',
+  router.delete('/:id/tag/:tid',
     auth.ensureAuthenticated,
     controller.removeTag);
 

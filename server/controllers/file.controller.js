@@ -155,6 +155,7 @@ console.log('Getting image');
       var writeStream = fs.createWriteStream(u);
 
       writeStream.on('open', function(){
+
         gm(config.root + '/server/tmp/' + file.id)
           .options({imageMagick: true})
           .resize(file.style.width)

@@ -42,8 +42,11 @@ exports.checkJWT = function(req,res,next){
 
   // Decode the token if present
   if (req.headers.authorization){
+    console.log('header', req.headers.authorization);
     var token = req.headers.authorization.split(' ')[1];
+    console.log('token', token);
     var payload = jwt.decode(token, config.jwt.secret);
+    console.log('payload', payload);
     // Check token expiration date
     if (payload.exp <= moment().unix()) {
       console.log('Token has expired');

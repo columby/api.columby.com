@@ -176,41 +176,57 @@ exports.destroy = function(req, res) {
   });
 };
 
-exports.addTag = function(req,res){
-  Dataset.find(req.params.id).success(function(dataset) {
-    if (dataset) {
-      dataset.addTag(req.body.tagId).success(function (dataset) {
-        return res.json(dataset);
+
+/**
+ *
+ * Crate and add a tag to a dataset
+ *
+ */
+exports.addTag = function(req,res) {
+
+  var tag = req.body.tag;
+
+  models.Tag.findOrCreate({where:{text: tag.text}}).success(function(tag, created){
+    Dataset.find(req.params.id).success(function (dataset) {
+      dataset.addTag(tag.id).success(function (dataset) {
+        return res.json({dataset: dataset});
       }).error(function (err) {
-        return res.json(res, err);
+        return handleError(res, err);
       });
-    } else {
-      return res.json(dataset);
-    }
+    }).error(function (err) {
+      return handleError(res, err);
+    });
   }).error(function(err){
     return handleError(res,err);
-  })
+  });
 };
 
+/**
+ *
+ * Detach a tag from a dataset
+ *
+ */
 exports.removeTag = function(req,res){
-  console.log(req.body);
   console.log(req.params);
-  console.log(req.query);
-  Dataset.find(req.params.id).success(function(dataset) {
-    if (dataset) {
-      console.log('dataset found. ', dataset.id);
-      dataset.removeTag(req.body.tagId).success(function() {
-        console.log('Tag removed. ');
-        return res.json({status:'success'});
-      }).error(function (err) {
-        return res.json(res, err);
-      });
-    } else {
-      return res.json(dataset);
-    }
-  }).error(function(err){
-    return handleError(res,err);
-  })
+  if (req.params.id && req.params.tid) {
+    Dataset.find(req.params.id).success(function (dataset) {
+      if (dataset) {
+        models.Tag.find({where: { id:req.params.tid}}).success(function(tag){
+          dataset.removeTag(tag).then(function() {
+            return res.json({status: 'success'});
+          });
+        }).error(function(err){
+          return handleError(res,err);
+        });
+      } else {
+        return res.json(dataset);
+      }
+    }).error(function (err) {
+      return handleError(res, err);
+    })
+  } else {
+    return handleError(res, {error: 'Missing id.'});
+  }
 };
 
 /*-------------- DISTRIBUTIONS ---------------------------------------------------------------*/
