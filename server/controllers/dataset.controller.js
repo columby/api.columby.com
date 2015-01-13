@@ -185,8 +185,13 @@ exports.destroy = function(req, res) {
 exports.addTag = function(req,res) {
 
   var tag = req.body.tag;
+  console.log('adding tag: ', req.body.tag);
 
-  models.Tag.findOrCreate({where:{text: tag.text}}).success(function(tag, created){
+  models.Tag.findOrCreate({
+    where:{
+      text: tag.text
+    }
+  }).success(function(tag, created){
     Dataset.find(req.params.id).success(function (dataset) {
       dataset.addTag(tag.id).success(function (dataset) {
         return res.json({dataset: dataset});

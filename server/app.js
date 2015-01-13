@@ -55,8 +55,6 @@ sequelize
     }
   });
 
-// Populate DB with sample data
-if(config.seedDB) { require('./config/seed'); }
 
 /**
  * Setup server
@@ -78,7 +76,6 @@ var routes = require('./routes')(app);
 /**
  * Start server
  */
-console.log(config.port);
 server.listen(config.port, config.ip, function () {
   console.log('Express server listening on %d, in %s mode', config.port, app.get('env'));
 });

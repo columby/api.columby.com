@@ -25,14 +25,9 @@ exports.show = function(req,res){};
  */
 exports.create = function(req,res){
   console.log('creating primary: ', req.body);
-  var dataset_id = req.body.datasetId;
-  console.log('did', dataset_id);
-  var distribution_id = req.body.distributionId;
-  console.log('did2', distribution_id);
   var primary = req.body;
-  delete primary.datasetId;
-  delete primary.distributionId;
-  models.Primary.create(req.body).success(function(primary) {
+
+  models.Primary.create(primary).success(function(primary) {
     console.log('p', primary.dataValues);
     res.json(primary.dataValues);
     //primary.setDataset(dataset_id).success(function(primary){
@@ -52,9 +47,8 @@ exports.create = function(req,res){
 };
 
 exports.update = function(req,res){
-  console.log('Updating primary: ', req.params);
   models.Primary.find(req.params.id).success(function(primary){
-    primary.updateAttributes(req.params.primary).success(function(primary){
+    primary.updateAttributes(req.body).success(function(primary){
       res.json(primary);
     }).error(function(err){
       return handleError(res,err);

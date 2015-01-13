@@ -80,13 +80,13 @@ exports.destroy = function(req,res) {
   });
 };
 
+
 /**
  *
  * Validate if a supplied link is valid for processing by columby
  *
  * @param req
  * @param res
- * @returns {*}
  */
 exports.validateLink = function(req,res){
 
@@ -98,7 +98,6 @@ exports.validateLink = function(req,res){
     return res.json({status:'error', message: 'No url provided'});
   }
 
-  console.log('validating: ', url);
   request({
     uri: url,
     method: 'GET',
@@ -121,7 +120,7 @@ exports.validateLink = function(req,res){
           if (result) {
             return res.json({valid:true, type:'fortes'})
           } else {
-
+            // No readable datasource
             return res.json({valid:false});
           }
         });
@@ -129,6 +128,8 @@ exports.validateLink = function(req,res){
     });
   });
 };
+
+
 
 /**
  *
@@ -170,6 +171,7 @@ function validateArcgis(url,cb){
   });
 }
 
+
 /**
  *
  * Validate if a source is a readable Fortes service.
@@ -178,28 +180,14 @@ function validateArcgis(url,cb){
  * @param cb
  */
 function validateFortes(url,cb){
-  console.log('Validating Fores');
-  request({
-    uri:url,
-    method:'GET',
-    timeout:2500,
-    followRedirects:true,
-    maxRedirects:10
-
-  }, function(err,response,body){
-    console.log('responseCode: ', response.statusCode);
-    console.log(err);
-    if(response.statusCode===200){
-      //console.log('body', body);
-      //var o = JSON.parse(body);
-      //if (o && typeof(o)==='object' && o!==null){
-      //  // check result
-      //  return cb(true);
-      //}
-    }
-    cb(false);
-  });
+  if (url==="http://ictdashboarddenhaag.fortes.nl/opendata/") {
+    cb(true);
+  } else {
+    cb(true);
+  }
 }
+
+
 
 function handleError(res, err) {
   console.log('Dataset error,', err);

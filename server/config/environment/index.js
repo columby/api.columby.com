@@ -20,7 +20,7 @@ var all = {
   root: path.normalize(__dirname + '/../../..'),
 
   // Server port
-  port: process.env.PORT || 8000,
+  port: process.env.NODE_API_PORT || 8000,
 
   // Should we populate the DB with sample data?
   seedDB: false

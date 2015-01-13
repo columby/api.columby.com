@@ -17,12 +17,22 @@ module.exports = function(sequelize, DataTypes) {
         unique: true
       },
 
-      status: {
-        type: DataTypes.ENUM,
-        values: ['draft', 'processing', 'error', 'done'],
+      // Type of job (arcgis, csv, fortes, ..)
+      jobType: {
+        type: DataTypes.STRING
+      },
+      jobStatus: {
+        type: DataTypes.STRING,
         defaultValue: 'draft'
       },
 
+      // Status of the job
+      status: {
+        type: DataTypes.STRING,
+        defaultValue: 'public'
+      },
+
+      // Extra info about the job for end-user.
       statusMsg: {
         type: DataTypes.STRING
       },
@@ -34,6 +44,7 @@ module.exports = function(sequelize, DataTypes) {
         //values: [ 'Do not sync', 'Yearly', 'Quarterly', 'Monthly', 'Weekly', 'Daily' ]
       },
 
+      // Last synchronisation date.
       syncDate: { type: DataTypes.DATE },
 
       created_at:{

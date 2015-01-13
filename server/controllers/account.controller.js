@@ -66,19 +66,26 @@ exports.canEdit = function(req, res, next) {
   // Check if a jwt is present
   if (req.jwt && req.jwt.sub){
     // Check if the user in the jwt exists
-    models.User.findOne(req.jwt.sub).success(function(user){
-      // admin can edit everything
+    models.User.find(req.jwt.sub).success(function(user){
       if (user.admin) {
         next();
+      } else {
+        user.getAccounts({ where:{ slug: req.params.id }}).success(function (accounts) {
+          if (accounts && accounts.length>0){
+            next();
+          } else {
+            return res.json({status:'err', msg:'No access. '});
+          }
+        }).error(function(err){
+          return handleError(res,err);
+        });
       }
-      // TODO: Validate if the logged in user has access to the publication account
-
+    }).error(function(err){
+      return handleError(res,err);
     });
   } else {
     return res.json({status:'err', msg:'User not logged in'});
   }
-  //console.log(req.user);
-
 };
 
 /**
