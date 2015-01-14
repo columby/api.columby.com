@@ -98,6 +98,11 @@ exports.validateLink = function(req,res){
     return res.json({status:'error', message: 'No url provided'});
   }
 
+  // Temp check for a specific api case
+  if (url==="http://ictdashboarddenhaag.fortes.nl/opendata/") {
+    return res.json({valid:true, type:'fortes'});
+  }
+
   request({
     uri: url,
     method: 'GET',
@@ -112,18 +117,8 @@ exports.validateLink = function(req,res){
 
     // Validate for arcgis
     validateArcgis(url, function(result){
-      console.log('result, ', result);
       if (result){
         return res.json({valid: true, type: 'arcgis'})
-      } else {
-        validateFortes(url, function(result){
-          if (result) {
-            return res.json({valid:true, type:'fortes'})
-          } else {
-            // No readable datasource
-            return res.json({valid:false});
-          }
-        });
       }
     });
   });
@@ -180,10 +175,11 @@ function validateArcgis(url,cb){
  * @param cb
  */
 function validateFortes(url,cb){
+  console.log('check fortes: ', url);
   if (url==="http://ictdashboarddenhaag.fortes.nl/opendata/") {
     cb(true);
   } else {
-    cb(true);
+    cb(false);
   }
 }
 

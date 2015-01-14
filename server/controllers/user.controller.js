@@ -321,7 +321,13 @@ exports.verify = function(req,res) {
       return res.json({status: 'error', err: 'token not found'});
     }
     // Find the user connected to the token
-    User.find(token.user_id).success(function (user) {
+    User.find({
+      where: {
+        id: token.user_id
+      }, include: [
+        { model: Account }
+      ]
+    }).success(function (user) {
       //.populate('accounts', 'name slug plan avatar primary')
       if (!user) { return res.json(user); }
       // Make user verified if needxed
