@@ -320,15 +320,8 @@ exports.verify = function(req,res) {
     if (!token) {
       return res.json({status: 'error', err: 'token not found'});
     }
-    // Find the user connected to the token
-    User.find({
-      where: {
-        id: token.user_id
-      }, include: [
-        { model: Account }
-      ]
-    }).success(function (user) {
-      //.populate('accounts', 'name slug plan avatar primary')
+
+    User.find(token.user_id).success(function (user) {
       if (!user) { return res.json(user); }
       // Make user verified if needxed
       if (user.verified !== true) {
@@ -337,18 +330,41 @@ exports.verify = function(req,res) {
           console.log('eee',err);
         });
       }
-      //delete the token
-      token.destroy().success(function(res){}).error(function(err){
-        console.log('err token delete, ', err);
-      });
-      // Send back a JWT
-      return res.json({
-        user: user,
-        token: auth.createToken(user)
+
+      user.getAccounts({
+        include: [
+          {model: models.File, as: 'avatar'}
+        ]
+      }).success(function (accounts) {
+        //console.log('get accounts: ', accounts);
+        console.log('Found ' + accounts.length + ' account(s)');
+        user = user.dataValues;
+        user.accounts = [];
+        for (var i = 0; i < accounts.length; i++) {
+          var account = accounts[i].dataValues;
+          account.role = accounts[i].AccountsUsers.dataValues.role;
+          delete account.AccountsUsers;
+          if (accounts[i].primary) {
+            user.primary = account;
+          }
+          user.accounts.push(account);
+        }
+
+        //delete the token
+        token.destroy().success(function(res){}).error(function(err){
+          console.log('err token delete, ', err);
+        });
+        // Send back a JWT
+        return res.json({
+          user: user,
+          token: auth.createToken(user)
+        });
+      }).error(function (err) {
+        console.log(err);
       });
     }).error(function (err) {
-      console.log('User find error, ', err);
-      return handleError(res, err);
+      console.log('something went wrong!');
+      handleError(res, err);
     });
   });
 };

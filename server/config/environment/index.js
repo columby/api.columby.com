@@ -27,6 +27,11 @@ var all = {
 
 };
 
+console.log('all', all);
+
+var a = require('./' + process.env.NODE_ENV + '.js');
+console.log(a);
+
 // Export the config object based on the NODE_ENV
 // ==============================================
 module.exports = _.merge(

@@ -10,7 +10,7 @@ module.exports = {
 
   // Server port
   port:     process.env.OPENSHIFT_NODEJS_PORT ||
-            process.env.PORT ||
+            process.env.NODE_UI_PORT ||
             8000,
 
   db:{
@@ -22,7 +22,7 @@ module.exports = {
   },
 
   mandrill : {
-    key:    process.env.MANDRILL_API
+    key:    process.env.MANDRILL_API_KEY
   },
 
   // Amazon AWS S3 File Storage

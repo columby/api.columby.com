@@ -26,6 +26,7 @@ var express = require('express'),
     config = require('./config/environment');
 
 console.log(config);
+
 /**
 *
 * Database settings
