@@ -27,6 +27,7 @@
     "mysql": "^2.5.3",
     "node-uuid": "^1.4.1",
     "pg": "^4.0.0",
+    "pg-escape": "0.0.3",
     "request": "^2.49.0",
     "sequelize": "^2.0.0-rc2",
     "serve-favicon": "~2.0.1",

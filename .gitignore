@@ -5,3 +5,5 @@
 /server/config/local.env.js
 /server/tmp/*
 dist
+
+/newrelic_agent.log
