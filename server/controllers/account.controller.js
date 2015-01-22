@@ -129,7 +129,7 @@ exports.show = function(req, res) {
   Account.find({
     where: { slug: req.params.id },
     include: [
-      //{ model: Collection },
+      { model: Collection },
       //{ model: Dataset },
       { model: File, as: 'avatar'},
       { model: File, as: 'headerImg'},
