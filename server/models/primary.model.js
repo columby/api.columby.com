@@ -23,7 +23,7 @@ module.exports = function(sequelize, DataTypes) {
       },
       jobStatus: {
         type: DataTypes.STRING,
-        defaultValue: 'draft'
+        defaultValue: 'draft'  // draft, error,
       },
 
       // Status of the job

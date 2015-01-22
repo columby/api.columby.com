@@ -9,8 +9,7 @@ var _ = require('lodash'),
     models = require('../models/index'),
     Dataset = require('../models/index').Dataset,
     Account = require('../models/index').Account,
-    File = require('../models/index').File,
-    Sequelize = require('sequelize')
+    File = require('../models/index').File
   ;
 
 
@@ -52,12 +51,14 @@ exports.extractlink = function(req,res) {
  *
  */
 exports.index = function(req, res) {
-  console.log('Fetching datasets/');
+  console.log('Fetching datasets');
   // Define WHERE clauses
   var filter = {
+    // Only show public datasets for a general index-show
     private: false
   };
 
+  // filter by account id if provided
   if (req.query.accountId){
     filter.account_id = req.query.accountId;
   }
@@ -73,7 +74,7 @@ exports.index = function(req, res) {
     offset: offset,
     order: 'created_at DESC',
     include: [
-      { model: Account, as:'account', include: [
+      { model: models.Account, as:'account', include: [
         { model: File, as: 'avatar'}
       ] }
     ]
@@ -92,8 +93,11 @@ exports.index = function(req, res) {
  */
 exports.show = function(req, res) {
   console.log('show dataset:', req.params.id);
+  // Show only if status is public and user can edit the dataset.
   Dataset.findOne({
-    where: { shortid: req.params.id },
+    where: {
+      shortid: req.params.id
+    },
     include: [
       { model: models.Distribution, as: 'distributions' },
       { model: models.Primary, as: 'primary' },

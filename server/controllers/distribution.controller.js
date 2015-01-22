@@ -4,12 +4,15 @@
  * Dependencies
  *
  */
-var _ = require('lodash'),
-  models = require('../models/index'),
-  Sequelize = require('sequelize'),
-  request = require('request')
+var config = require('../config/environment/index'),
+    AWS = require('aws-sdk'),
+    _ = require('lodash'),
+    models = require('../models/index'),
+    request = require('request'),
+    fileController = require('./file.controller')
   ;
 
+var s3 = new AWS.S3();
 
 exports.index = function(req,res) {
   console.log(req.params);
@@ -72,6 +75,42 @@ exports.destroy = function(req,res) {
   console.log(req.params);
   models.Distribution.find(req.params.id).success(function(distribution){
     if (!distribution) return res.json({ status:'error', err: 'Failed to load distribution' });
+
+    // delete file if present
+    if (distribution.file_id){
+
+      // Find the file, delete it from s3 and db
+      models.File.find({where:{id:distribution.file_id}}).success(function(file){
+        if (!file) {
+          console.log('File not found. ');
+        } else {
+          var key = file.url;
+          key = key.replace('https://'+config.aws.bucket+'.s3.amazonaws.com/', '');
+          // File found, delete it from s3
+          var params = {
+            Bucket: config.aws.bucket,
+            Key: key
+          };
+          // delete from s3
+          console.log('deleting ' + key);
+          s3.deleteObject(params, function (err) {
+            if (err) {
+              console.log(err);
+            } else {
+              // delete db entry
+              file.destroy().success(function() {
+                console.log('remove successful.');
+              }).error(function(err){
+                console.log('err', err);
+              });
+            }
+          });
+        }
+      }).error(function(err){
+        console.log(err);
+      });
+    }
+
     distribution.destroy().success(function(){
       res.json({status:'success'});
     }).error(function(err){
@@ -119,6 +158,8 @@ exports.validateLink = function(req,res){
     validateArcgis(url, function(result){
       if (result){
         return res.json({valid: true, type: 'arcgis'})
+      } else {
+        return res.json({ valid: false, msg: 'No valid url' });
       }
     });
   });
@@ -150,7 +191,8 @@ function validateArcgis(url,cb){
       try {
         o = JSON.parse(body);
       } catch(err){
-        console.log('err',err);
+        console.log('err parsing',err);
+        return cb(false);
       }
 
       if (o && typeof(o) === 'object' && o !== null) {
@@ -162,7 +204,7 @@ function validateArcgis(url,cb){
         }
       }
     }
-    cb(false);
+    return cb(false);
   });
 }
 

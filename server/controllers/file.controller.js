@@ -11,14 +11,14 @@ var _ = require('lodash'),
     crypto    = require('crypto'),
     config = require('../config/environment/index'),
     AWS = require('aws-sdk'),
-    path = require('path'),
     fs = require('fs'),
     gm = require('gm').subClass({ imageMagick: true }),
     request = require('request')
-    config = require('../config/environment/index')
 ;
 
+
 var s3 = new AWS.S3();
+
 
 /** ------ FUNCTIONS ------------------------------------------------------- **/
 
@@ -267,8 +267,11 @@ exports.show = function(req, res) {
 };
 
 
-
-// Creates a new file in the DB.
+/**
+ *
+ * Creates a new file in the DB.
+ *
+ */
 exports.create = function(req, res) {
   if (!req.user) { return handleError(res, {err:'No user id'});  }
 
@@ -281,7 +284,12 @@ exports.create = function(req, res) {
   });
 };
 
-// Updates an existing file in the DB.
+
+/**
+ *
+ * Updates an existing file in the DB.
+ *
+ */
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
   File.findById(req.params.id, function (err, file) {
@@ -295,33 +303,40 @@ exports.update = function(req, res) {
   });
 };
 
-// Deletes a file from the DB.
-exports.destroy = function(req, res) {
 
+/**
+ *
+ * Deletes a file from the DB.
+ *
+ */
+exports.destroy = function(req, res) {
   // Find the file
-  File.findOne({_id: req.file._id}, function (err,file){
+  File.find({where:{id:req.file.id}}).success(function(file){
+
     // File found, delete it from s3
     var params = {
       Bucket: config.aws.bucket,
-      Key: file.s3_key
+      Key: req.file.key
     };
-    s3.deleteObject(params, function(err, data) {
-      if (err) {
-        return res.json({
-          status:'error',
-          err: err});
-      } else {
-        file.remove(function(result){
-          console.log('remove');
-          res.json({status: 'success'});
-        });
-      }
+
+    s3.deleteObject(params, function(err) {
+      if (err) { return handleError(res,err); }
+
+      file.remove(function(){
+        console.log('remove successful.');
+        res.json({status: 'success'});
+      });
     });
+
+  }).error(function(err){
+
+    console.log(err);
   });
 };
 
 
 /***
+ *
  * Sign a request
  *
  * Required params: size, type, name

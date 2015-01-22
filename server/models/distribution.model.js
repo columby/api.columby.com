@@ -58,6 +58,7 @@ module.exports = function(sequelize, DataTypes) {
     },{
       classMethods: {
         associate: function(models) {
+          // associate an uploaded file.
           Distribution.belongsTo(models.File, { as: 'file' });
         }
       }

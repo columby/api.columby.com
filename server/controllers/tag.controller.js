@@ -17,7 +17,30 @@ var _ = require('lodash'),
  */
 exports.index = function(req, res) {
   console.log('index tags', req.query);
-  models.Tag.findAll().success(function(models) {
+  console.log(req.params);
+  var filter = {};
+  if (req.query.tagId){
+    filter.id= req.query.tagId
+  } else if(req.query.text){
+    filter.text= req.query.text
+  }
+
+  // Include contenttype
+  var include=[];
+  if (req.query.contentType && req.query.contentType==='dataset'){
+    include.push({
+      model: models.Dataset,
+      as: 'tags',
+      include: [
+        {model: models.Account, as:'account'}
+      ]
+    });
+  }
+
+  models.Tag.findAll({
+    where: filter,
+    include: include
+  }).success(function(models) {
     return res.json(models);
   }).error(function(err){
     return handleError(res, err);

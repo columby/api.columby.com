@@ -7,7 +7,8 @@
  */
 var _ = require('lodash'),
   models = require('../models/index'),
-  Sequelize = require('sequelize')
+  pg = require('pg'),
+    config = require('../config/environment')
   ;
 
 
@@ -59,8 +60,25 @@ exports.update = function(req,res){
 };
 
 exports.destroy = function(req,res){
-  var primaryId = req.params.id;
-  models.Primary.find(primaryId).success(function(primary){
+  var id = req.params.id;
+  models.Primary.find(id).success(function(primary){
+
+    // delete the table
+    var conn = config.db.postgis;
+    pg.connect(conn, function(err,client,done){
+      if (err){
+        console.log('error connectiing: ', err);
+      }
+      var sql='DROP TABLE IF EXISTS primary_' +  primary.id + ';';
+      console.log('sql', sql);
+      client.query(sql, function(err,result){
+        if (err){
+          console.log(err);
+        }
+        console.log(result);
+        done();
+      });
+    });
     primary.destroy().success(function(){
       return res.json({status:'success'});
     }).error(function(err){
