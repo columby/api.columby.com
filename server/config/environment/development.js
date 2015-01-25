@@ -4,7 +4,7 @@
 // ==================================
 module.exports = {
 
-  port: process.env.PORT,
+  port: process.env.NODE_API_PORT,
 
   db:{
     uri: process.env.DATABASE_URL,
