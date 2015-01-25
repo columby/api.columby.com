@@ -29,7 +29,6 @@ module.exports = {
 
   embedly: {
     key : process.env.EMBEDLY_KEY
-  },
+  }
 
-  seedDB: false
 };
