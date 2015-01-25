@@ -41,7 +41,7 @@ sequelize
  * Read model files
  *
  **/
-var db        = {};
+var db = {};
 
 fs.readdirSync(__dirname)
   .filter(function(file) {
@@ -49,7 +49,6 @@ fs.readdirSync(__dirname)
   })
   .forEach(function(file) {
     var model = sequelize["import"](path.join(__dirname, file));
-    console.log('adding ', model.name);
     db[model.name] = model;
   });
 
@@ -65,23 +64,6 @@ Object.keys(db).forEach(function(modelName) {
   }
 });
 
-/**
- *
- * Resync database for development version
- *
- **/
-if (config.seedDB === true){
-  sequelize
-    .sync({ force: true })
-    .complete(function(err) {
-      if (!!err) {
-        console.log('An error occurred while creating the table:', err)
-      } else {
-        console.log('It worked!');
-        require('./../seed/seed');
-      }
-    });
-}
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;

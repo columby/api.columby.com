@@ -20,17 +20,11 @@ var all = {
   root: path.normalize(__dirname + '/../../..'),
 
   // Server port
-  port: process.env.NODE_API_PORT || 8000,
-
-  // Should we populate the DB with sample data?
-  seedDB: false
+  port: process.env.NODE_API_PORT || 8000
 
 };
 
-console.log('all', all);
-
 var a = require('./' + process.env.NODE_ENV + '.js');
-console.log(a);
 
 // Export the config object based on the NODE_ENV
 // ==============================================
