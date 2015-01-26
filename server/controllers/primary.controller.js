@@ -8,8 +8,7 @@
 var _ = require('lodash'),
   models = require('../models/index'),
   pg = require('pg'),
-    config = require('../config/environment')
-  ;
+  config = require('../config/environment');
 
 
 /*-------------- PRIMARY DISTRIBUTION --------------------------------------------------------*/
@@ -88,6 +87,42 @@ exports.destroy = function(req,res){
     return handleError(res,err);
   });
 };
+
+
+/**
+ *
+ * (re)sync an existing primary source.
+ *
+ */
+exports.sync = function(req,res) {
+
+  // Create a new job
+  var j = {
+    type: req.body.jobType,
+    dataset_id: req.body.datasetId
+  };
+
+  models.Job.create(j).then(function(job){
+    console.log('Job ' + job.id + ' created. Updating Primary source. ');
+    // update primary source status
+    models.Primary.update({
+      jobStatus: 'active'
+    },{
+      where: {
+        id: req.body.primaryId
+      }
+    }).then(function(updatedPrimary){
+      console.log('updated primary ', updatedPrimary);
+      res.json({result: updatedPrimary});
+    }).catch(function(err){
+      return handleError(res,err);
+    });
+  }).catch(function(err){
+    return handleError(res,err);
+  });
+};
+
+
 
 function handleError(res, err) {
   console.log('Dataset error,', err);

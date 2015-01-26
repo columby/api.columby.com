@@ -22,6 +22,9 @@ module.exports = function(app){
   router.get('/:id',
     controller.show);
 
+  router.post('/:id/sync',
+    controller.sync);
+
   router.put('/:id',
     auth.ensureAuthenticated,
     controller.update);
