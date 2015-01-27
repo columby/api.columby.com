@@ -8,7 +8,6 @@ if (config.mandrill.key){
   mandrill_client = new mandrill.Mandrill(config.mandrill.key);
 }
 
-
 exports.preRegister = function(vars, callback){
 
   if (mandrill_client) {
@@ -131,7 +130,7 @@ exports.login = function(vars, callback){
         'rcpt' : vars.user.email,
         'vars': [{
           'name':'TITLE',
-          'content':'Your login token',
+          'content':'Your login token'
         },{
           'name':'MESSAGE',
           'content':'Hi!<br/>There was a request to login. Please click the button below to login. <br>Or copy and paste this url:<br>' + vars.tokenurl + '<br><br>If you did not make this request, just ignore this email.'
@@ -141,8 +140,8 @@ exports.login = function(vars, callback){
         },{
           'name':'LINKTITLE',
           'content': 'Login at Columby'
-        }],
-      }],
+        }]
+      }]
     }
   }, callback);
   } else {

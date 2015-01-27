@@ -265,6 +265,7 @@ exports.login = function(req,res) {
       { model: Account }
     ]
   }).success(function(user) {
+    console.log('User found ', user.dataValues);
     if (!user) {
       return res.json({
         status: 'not_found',
@@ -274,7 +275,6 @@ exports.login = function(req,res) {
 
     // create a new logintoken
     Token.create({user_id: user.id}).success(function(token){
-      console.log('token created', token.token);
       // Send the new token by email
       var vars = {
         tokenurl: req.protocol + '://' + req.get('host') + '/u/signin?token=' + token.token,
@@ -284,7 +284,6 @@ exports.login = function(req,res) {
         }
       };
       emailService.login(vars, function(result){
-        console.log(user.shortid);
         if (result[0].status === 'sent') {
           return res.json({status: 'success', user: user.shortid});
         } else {
@@ -292,7 +291,6 @@ exports.login = function(req,res) {
         }
       });
     }).error(function(err){
-      console.log('err', err);
       return handleError(res,err);
     });
   })
@@ -337,7 +335,7 @@ exports.verify = function(req,res) {
         ]
       }).success(function (accounts) {
         //console.log('get accounts: ', accounts);
-        console.log('Found ' + accounts.length + ' account(s)');
+        //console.log('Found ' + accounts.length + ' account(s)');
         user = user.dataValues;
         user.accounts = [];
         for (var i = 0; i < accounts.length; i++) {
@@ -352,7 +350,7 @@ exports.verify = function(req,res) {
 
         //delete the token
         token.destroy().success(function(res){}).error(function(err){
-          console.log('err token delete, ', err);
+          //console.log('err token delete, ', err);
         });
         // Send back a JWT
         return res.json({
@@ -360,7 +358,8 @@ exports.verify = function(req,res) {
           token: auth.createToken(user)
         });
       }).error(function (err) {
-        console.log(err);
+        handleError(res, err);
+        //console.log(err);
       });
     }).error(function (err) {
       console.log('something went wrong!');
