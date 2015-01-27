@@ -27,3 +27,4 @@ NodeJS, ExpressJS,
   API: api.columby.com
   
  
+[git-model](http://nvie.com/posts/a-successful-git-branching-model/)
