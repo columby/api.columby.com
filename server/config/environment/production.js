@@ -10,11 +10,12 @@ module.exports = {
 
   // Server port
   port:     process.env.OPENSHIFT_NODEJS_PORT ||
-            process.env.NODE_UI_PORT ||
+            process.env.NODE_API_PORT ||
             8000,
 
   db:{
-    uri: process.env.DATABASE_URL
+    uri: process.env.DATABASE_URL,
+    postgis: process.env.DATABASE_POSTGIS_URL
   },
 
   jwt: {
