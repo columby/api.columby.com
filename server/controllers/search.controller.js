@@ -58,40 +58,40 @@ exports.search = function(req, res) {
     .add(Account.findAll({where: Sequelize.or.apply(null, account_wheres)})) // .on('sql', console.log))
     .run()
     .success(function(_results){
-        var results = [];
-        // add datasets
-        for(var idx=0; idx < _results[0].length; idx++) {
-            results.push({
-              title: _results[0][idx].title,
-              description: _results[0][idx].description,
-              weight: weightFunc(weight_DatasetTitle, _results[0][idx].title) + weightFunc(weight_DatasetDescription, _results[0][idx].description)
-            });
-        }
-        // add accounts
-        for(var idx=0; idx < _results[1].length; idx++) {
-            results.push({
-              title: _results[1][idx].name,
-              description: '',
-              weight: weightFunc(weight_AccountName, _results[0][idx].name)
-            });
-        }
-        // sort on weight
-        results.sort(function(a,b){
-            if (a.weight > b.weight) {
-                return -1;
-            }
-            if (a.weight < b.weight) {
-                return +1;
-            }
-            return 0;
+      var results = [];
+      // add datasets
+      for(var idx=0; idx < _results[0].length; idx++) {
+        results.push({
+          title: _results[0][idx].title,
+          description: _results[0][idx].description,
+          shortId: _results[ 0][ idx].shortid,
+          weight: weightFunc(weight_DatasetTitle, _results[0][idx].title) + weightFunc(weight_DatasetDescription, _results[0][idx].description)
         });
-        return res.json(results);
+      }
+      // add accounts
+      for(var idx=0; idx < _results[1].length; idx++) {
+        results.push({
+          title: _results[1][idx].name,
+          description: '',
+          weight: weightFunc(weight_AccountName, _results[0][idx].name)
+        });
+      }
+      // sort on weight
+      results.sort(function(a,b){
+        if (a.weight > b.weight) {
+          return -1;
+        }
+        if (a.weight < b.weight) {
+          return +1;
+        }
+        return 0;
+      });
+      return res.json(results);
     })
     .error(function(err){
-        console.log(err);
-        handleError(res, err);
-    })
-    ;
+      console.log(err);
+      handleError(res, err);
+    });
 
   //return res.json({status:"ok", query:query});
 };
