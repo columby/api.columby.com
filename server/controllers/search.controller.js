@@ -61,7 +61,7 @@ exports.search = function(req, res) {
     )})) // .on('sql', console.log))
     .add(Account.findAll({where: Sequelize.or.apply(null, account_wheres)})) // .on('sql', console.log))
     .run()
-    .success(function(_results){
+    .then(function(_results){
       var results = [];
       // add datasets
       for(var idx=0; idx < _results[0].length; idx++) {
@@ -92,7 +92,7 @@ exports.search = function(req, res) {
       });
       return res.json(results);
     })
-    .error(function(err){
+    .catch(function(err){
       console.log(err);
       handleError(res, err);
     });

@@ -5,9 +5,7 @@
  * Dependencies
  *
  */
-var _ = require('lodash'),
-  Sequelize = require('sequelize'),
-  models = require('../models/index');
+var models = require('../models/index');
 
 
 /**
@@ -40,9 +38,9 @@ exports.index = function(req, res) {
   models.Tag.findAll({
     where: filter,
     include: include
-  }).success(function(models) {
+  }).then(function(models) {
     return res.json(models);
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res, err);
   });
 };
@@ -56,9 +54,9 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-  models.Tag.find({title: req.params.title}).success(function(model){
+  models.Tag.find({title: req.params.title}).then(function(model){
     res.json(model);
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
@@ -73,19 +71,19 @@ exports.show = function(req, res) {
  */
 exports.create = function(req,res){
   console.log('Creating tag, ', req.body);
-  models.Tag.find({where:{text:req.body.text}}).success(function(model) {
+  models.Tag.find({where:{text:req.body.text}}).then(function(model) {
     if (model && model.id){
       console.log('existing term', model.dataValues);
       return res.json(model);
     } else {
-      models.Tag.create({text: req.body.text}).success(function(model) {
+      models.Tag.create({text: req.body.text}).then(function(model) {
         console.log('new term', model.id);
         return res.json(model);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
       });
     }
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };

@@ -5,12 +5,7 @@
  * Dependencies
  *
  */
-var _ = require('lodash'),
-    models = require('../models/index'),
-    Dataset = require('../models/index').Dataset,
-    Account = require('../models/index').Account,
-    File = require('../models/index').File
-  ;
+var models = require('../models/index');
 
 
 exports.extractlink = function(req,res) {
@@ -68,20 +63,19 @@ exports.index = function(req, res) {
   // Set (default) offset
   var offset = req.query.offset || 0;
 
-  Dataset.findAndCountAll({
+  models.Dataset.findAndCountAll({
     where: filter,
     limit: limit,
     offset: offset,
     order: 'created_at DESC',
     include: [
       { model: models.Account, as:'account', include: [
-        { model: File, as: 'avatar'}
+        { model: models.File, as: 'avatar'}
       ] }
     ]
-  }).success(function(datasets) {
+  }).then(function(datasets) {
     return res.json(datasets);
-  }).error(function(err){
-    console.log(err);
+  }).catch(function(err){
     return handleError(res, err);
   });
 };
@@ -94,7 +88,7 @@ exports.index = function(req, res) {
 exports.show = function(req, res) {
   console.log('show dataset:', req.params.id);
   // Show only if status is public and user can edit the dataset.
-  Dataset.findOne({
+  models.Dataset.findOne({
     where: {
       shortid: req.params.id
     },
@@ -102,17 +96,17 @@ exports.show = function(req, res) {
       { model: models.Distribution, as: 'distributions' },
       { model: models.Primary, as: 'primary' },
       { model: models.Tag, as:'tags' },
-      { model: File, as: 'headerImg'},
-      { model: Account, as:'account', include: [
-        { model: File, as: 'avatar'},
-        { model: File, as: 'headerImg'}
+      { model: models.File, as: 'headerImg'},
+      { model: models.Account, as:'account', include: [
+        { model: models.File, as: 'avatar'},
+        { model: models.File, as: 'headerImg'}
       ] },
       { model: models.Reference, as: 'references' }
     ]
-  }).success(function(dataset){
+  }).then(function(dataset){
     return res.json(dataset);
-  }).error(function(err){
-    console.log(err);
+  }).catch(function(err){
+    return handleError(res, err);
   });
 };
 
@@ -132,15 +126,15 @@ exports.create = function(req, res) {
   }
 
   // Create a new dataset
-  Dataset.create(req.body).success(function(dataset) {
+  models.Dataset.create(req.body).then(function(dataset) {
     //console.log('Dataset created: ', dataset);
-    dataset.setAccount(req.body.account.id).success(function(dataset) {
+    dataset.setAccount(req.body.account.id).then(function(dataset) {
       console.log('Dataset account attached: ', dataset);
       return res.json(dataset);
-    }).error(function(err) {
+    }).catch(function(err) {
       handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     handleError(res,err);
   });
 };
@@ -150,7 +144,7 @@ exports.update = function(req, res) {
 
   if(req.body._id) { delete req.body._id; }
 
-  Dataset.find(req.params.id).success(function(dataset){
+  models.Dataset.find(req.params.id).then(function(dataset){
     if(!dataset) { return res.send(404); }
 
     // Set new header image if needed
@@ -158,19 +152,19 @@ exports.update = function(req, res) {
       dataset.setHeaderImg(req.body.headerImg);
     }
 
-    dataset.updateAttributes(req.body).success(function(dataset) {
+    dataset.updateAttributes(req.body).then(function(dataset) {
       return res.json(dataset);
-    }).error(function(err) {
+    }).catch(function(err) {
       handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     handleError(res,err);
   });
 };
 
 // Deletes a dataset from the DB.
 exports.destroy = function(req, res) {
-  Dataset.findById(req.params.id, function (err, dataset) {
+  models.Dataset.findById(req.params.id, function (err, dataset) {
     if(err) { return handleError(res, err); }
     if(!dataset) { return res.send(404); }
     dataset.remove(function(err) {
@@ -195,17 +189,17 @@ exports.addTag = function(req,res) {
     where:{
       text: tag.text
     }
-  }).success(function(tag, created){
-    Dataset.find(req.params.id).success(function (dataset) {
-      dataset.addTag(tag.id).success(function (dataset) {
+  }).then(function(tag, created){
+    models.Dataset.find(req.params.id).then(function (dataset) {
+      dataset.addTag(tag.id).then(function (dataset) {
         return res.json({dataset: dataset});
-      }).error(function (err) {
+      }).catch(function (err) {
         return handleError(res, err);
       });
-    }).error(function (err) {
+    }).catch(function (err) {
       return handleError(res, err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
@@ -218,19 +212,19 @@ exports.addTag = function(req,res) {
 exports.removeTag = function(req,res){
   console.log(req.params);
   if (req.params.id && req.params.tid) {
-    Dataset.find(req.params.id).success(function (dataset) {
+    models.Dataset.find(req.params.id).then(function (dataset) {
       if (dataset) {
-        models.Tag.find({where: { id:req.params.tid}}).success(function(tag){
+        models.Tag.find({where: { id:req.params.tid}}).then(function(tag){
           dataset.removeTag(tag).then(function() {
             return res.json({status: 'success'});
           });
-        }).error(function(err){
+        }).catch(function(err){
           return handleError(res,err);
         });
       } else {
         return res.json(dataset);
       }
-    }).error(function (err) {
+    }).catch(function (err) {
       return handleError(res, err);
     })
   } else {
@@ -255,33 +249,33 @@ exports.createDistribution = function(req, res) {
   var id = req.params.id;
   var distribution = req.body.distribution;
 
-  Dataset.find(id).success(function(dataset) {
+  models.Dataset.find(id).then(function(dataset) {
     if (!dataset){ return handleError( res, { error:'Failed to load dataset' } ); }
-    models.Distribution.create(distribution).success(function(distribution){
+    models.Distribution.create(distribution).then(function(distribution){
       console.log('saved distribution', distribution);
-      dataset.addDistribution(distribution).success(function(dataset){
+      dataset.addDistribution(distribution).then(function(dataset){
         console.log('dataset', dataset);
         res.json(dataset);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
 
 exports.updateDistribution = function(req, res, id) {
   console.log(req.params);
-  models.Distribution.find(req.params.did).success(function(distribution){
-    distribution.updateAttributes(req.params.distribution).success(function(distribution){
+  models.Distribution.find(req.params.did).then(function(distribution){
+    distribution.updateAttributes(req.params.distribution).then(function(distribution){
       res.json(distribution.id);
     })
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   })
 };
@@ -291,7 +285,7 @@ exports.destroyDistribution = function(req, res) {
   var id = String(req.params.id);
   var distributionId = String(req.params.distributionId);
 
-  Dataset.findOne({_id:id},function(err,dataset){
+  models.Dataset.findOne({_id:id},function(err,dataset){
     if (err) return res.json({status:'error', err:err});
     if (!dataset) return res.json({error:'Failed to load dataset', err:err});
     for (var i=0; i < dataset.distributions.length; i++){
@@ -323,22 +317,22 @@ exports.createReference = function(req, res) {
   console.log('reference', reference);
 
   // Find the dataset to attach the reference to
-  Dataset.find(id).success(function(dataset){
+  models.Dataset.find(id).then(function(dataset){
     if (!dataset){ return handleError( res, { error:'Failed to load dataset' } ); }
     // Create a db-entry for the reference
-    models.Reference.create(reference).success(function(reference){
+    models.Reference.create(reference).then(function(reference){
       console.log('saved reference: ',reference);
       // Add the reference to the dataset
-      dataset.addReference(reference).success(function(dataset){
+      dataset.addReference(reference).then(function(dataset){
         console.log('dataset', dataset);
         res.json(dataset);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
@@ -351,19 +345,19 @@ exports.updateReference = function(req, res) {
 exports.destroyReference = function(req, res) {
 
   var rid = req.params.rid;
-  models.Reference.find(rid).success(function(reference){
+  models.Reference.find(rid).then(function(reference){
     console.log('reference', reference);
     if(reference){
-      reference.destroy().success(function(){
+      reference.destroy().then(function(){
         console.log('deleted');
         res.json({status:'success'});
-      }).error(function(err){
+      }).catch(function(err){
         handleError(res,err);
       });
     } else {
       res.json(reference);
     }
-  }).error(function(err){
+  }).catch(function(err){
     handleError(res,err);
   });
 };
