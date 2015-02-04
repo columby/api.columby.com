@@ -37,5 +37,5 @@ module.exports = function(app) {
     auth.ensureAuthenticated,
       controller.destroy);
 
-  app.use('/api/v2/file', router);
+  app.use('/v2/file', router);
 };

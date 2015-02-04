@@ -128,6 +128,6 @@ module.exports = function(app){
     auth.ensureAuthenticated,
     controller.destroyReference);
 
-  app.use('/api/v2/dataset',router);
+  app.use('/v2/dataset',router);
 
 };

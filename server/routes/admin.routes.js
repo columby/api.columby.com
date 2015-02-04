@@ -8,5 +8,5 @@ module.exports = function(app){
 
   router.get('/check-primary-accounts', controller.userAccounts );
 
-  app.use('/api/v2/admin', router);
+  app.use('/v2/admin', router);
 };

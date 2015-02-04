@@ -34,6 +34,6 @@ module.exports = function(app){
     controller.destroy);
 
 
-  app.use('/api/v2/primary', router);
+  app.use('/v2/primary', router);
 
 };
