@@ -98,14 +98,14 @@ exports.ensureAuthenticated = function(req, res, next) {
  * Validate if a user has admin rights
  */
 exports.isAdmin = function(req,res,next) {
-  User.find(id).success(function(user){
+  models.User.find(id).then(function(user){
     if (user && (user.roles.indexOf('admin') !== -1)) {
       req.user = user;
       next();
     } else {
       res.status(401).json('Administers only.');
     }
-  }).error(function(err){
+  }).catch(function(err){
     res.json(err);
   });
 };

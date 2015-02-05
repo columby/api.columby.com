@@ -3,9 +3,6 @@
 var _             = require('lodash'),
 
     models        = require('../models/index'),
-    User          = require('../models/index').User,
-    Token         = require('../models/index').Token,
-    Account       = require('../models/index').Account,
 
     config        = require('../config/environment/index'),
     auth          = require('../controllers/auth.controller'),
@@ -26,13 +23,13 @@ exports.me = function(req, res) {
   //  include: [ { model: Division } ],
   //  order: [ [ Division, DepartmentDivision, 'name' ] ]
   //});
-  User.find(req.jwt.sub).success(function(user) {
+  models.User.find(req.jwt.sub).then(function(user) {
     console.log('User found: ', user.id);
     user.getAccounts({
       include: [
         { model: models.File, as: 'avatar'}
       ]
-    }).success(function(accounts){
+    }).then(function(accounts){
       //console.log('get accounts: ', accounts);
       console.log('Found '+ accounts.length + ' account(s)');
       user = user.dataValues;
@@ -50,10 +47,10 @@ exports.me = function(req, res) {
         user.accounts.push(account);
       }
       return res.json(user);
-    }).error(function(err){
+    }).catch(function(err){
       console.log(err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     console.log('something went wrong!');
     handleError(res,err);
   });
@@ -84,7 +81,7 @@ exports.config = function(req,res){
  *
  **/
 exports.index = function(req, res) {
-  User.find(function (err, users) {
+  models.User.find(function (err, users) {
     if(err) { return handleError(res, err); }
     return res.json(users);
   });
@@ -101,7 +98,7 @@ exports.index = function(req, res) {
  *
  **/
 exports.show = function(req, res) {
-  User.findOne({_id: req.params.id}, function (err, user) {
+  models.User.findOne({_id: req.params.id}, function (err, user) {
     console.log('user', user);
     if(err) { return handleError(res, err); }
     return res.json(user);
@@ -129,9 +126,9 @@ exports.show = function(req, res) {
 exports.register = function(req, res) {
   console.log('new user', req.body);
   // Try to create a new user
-  User.create(req.body)
+  models.User.create(req.body)
     // Handle successful user creation
-    .success(function(user) {
+    .then(function(user) {
 
       // Create a primary publication account for this user.
       var newAccount = {
@@ -139,10 +136,10 @@ exports.register = function(req, res) {
         primary: true
       };
       console.log('Creating user: ', newAccount);
-      Account.create(newAccount).success(function(account){
+      models.Account.create(newAccount).then(function(account){
         console.log('New account: ', account);
         // Add the new account to the craeted user
-        user.addAccount(account).success(function(result){
+        user.addAccount(account).then(function(result){
           // Send email to user with login link.
           console.log('result after save: ', result);
 
@@ -155,7 +152,7 @@ exports.register = function(req, res) {
           console.log('var', vars);
           // Create Login Token
           // create a new logintoken
-          Token.create({user_id: user.id}).success(function(token){
+          models.Token.create({user_id: user.id}).then(function(token){
             console.log('token created', token.token);
             // Send the new token by email
             var emailVars = {
@@ -174,20 +171,20 @@ exports.register = function(req, res) {
                 return handleError(res, { status: 'error', err: 'Error sending mail.' });
               }
             });
-          }).error(function(err){
+          }).catch(function(err){
             console.log('err', err);
             return handleError(res,err);
           });
-        }).error(function(err){
+        }).catch(function(err){
           user.destroy();
           console.log('err',err);
           handleError(res,err);
         });
-      }).error(function(err){
+      }).catch(function(err){
         console.log(err);
         handleError(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       console.log(err);
       handleError(res,err);
     });
@@ -207,7 +204,7 @@ exports.register = function(req, res) {
  **/
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
-  User.findById(req.params.id, function (err, user) {
+  models.User.findById(req.params.id, function (err, user) {
     if (err) { return handleError(res, err); }
     if(!user) { return res.send(404); }
     var updated = _.merge(user, req.body);
@@ -235,7 +232,7 @@ exports.update = function(req, res) {
  *
  **/
 exports.destroy = function(req, res) {
-  User.findById(req.params.id, function (err, user) {
+  models.User.findById(req.params.id, function (err, user) {
     if(err) { return handleError(res, err); }
     if(!user) { return res.send(404); }
     user.remove(function(err) {
@@ -257,14 +254,14 @@ exports.destroy = function(req, res) {
  **/
 exports.login = function(req,res) {
   console.log('Finding user ', req.body.email);
-  User.find({
+  models.User.find({
     where: {
       email: req.body.email
     },
     include: [
-      { model: Account }
+      { model: models.Account }
     ]
-  }).success(function(user) {
+  }).then(function(user) {
     if (!user) {
       return res.json({
         status: 'not_found',
@@ -273,7 +270,7 @@ exports.login = function(req,res) {
     }
 
     // create a new logintoken
-    Token.create({user_id: user.id}).success(function(token){
+    models.Token.create({user_id: user.id}).then(function(token){
       console.log('token created', token.token);
       // Send the new token by email
       var vars = {
@@ -284,6 +281,7 @@ exports.login = function(req,res) {
         }
       };
       emailService.login(vars, function(result){
+        console.log(result);
         console.log(user.shortid);
         if (result[0].status === 'sent') {
           return res.json({status: 'success', user: user.shortid});
@@ -291,12 +289,12 @@ exports.login = function(req,res) {
           return handleError(res, { status: 'error', err: 'Error sending mail.' });
         }
       });
-    }).error(function(err){
+    }).catch(function(err){
       console.log('err', err);
       return handleError(res,err);
     });
   })
-  .error(function(err){
+  .catch(function(err){
     if (err) { return handleError(res, err); }
   });
 };
@@ -316,17 +314,17 @@ exports.verify = function(req,res) {
   var loginToken = req.query.token;
 
   // Check if supplied token exists and delete it after use
-  Token.find({where:{'token': loginToken}}).success(function(token) {
+  models.Token.find({where:{'token': loginToken}}).then(function(token) {
     if (!token) {
       return res.json({status: 'error', err: 'token not found'});
     }
 
-    User.find(token.user_id).success(function (user) {
+    models.User.find(token.user_id).then(function (user) {
       if (!user) { return res.json(user); }
       // Make user verified if needxed
       if (user.verified !== true) {
         user.verified = true;
-        user.save().success(function(user){}).error(function(err){
+        user.save().then(function(user){}).catch(function(err){
           console.log('eee',err);
         });
       }
@@ -335,7 +333,7 @@ exports.verify = function(req,res) {
         include: [
           {model: models.File, as: 'avatar'}
         ]
-      }).success(function (accounts) {
+      }).then(function (accounts) {
         //console.log('get accounts: ', accounts);
         console.log('Found ' + accounts.length + ' account(s)');
         user = user.dataValues;
@@ -351,7 +349,7 @@ exports.verify = function(req,res) {
         }
 
         //delete the token
-        token.destroy().success(function(res){}).error(function(err){
+        token.destroy().then(function(res){}).catch(function(err){
           console.log('err token delete, ', err);
         });
         // Send back a JWT
@@ -359,10 +357,10 @@ exports.verify = function(req,res) {
           user: user,
           token: auth.createToken(user)
         });
-      }).error(function (err) {
+      }).catch(function (err) {
         console.log(err);
       });
-    }).error(function (err) {
+    }).catch(function (err) {
       console.log('something went wrong!');
       handleError(res, err);
     });

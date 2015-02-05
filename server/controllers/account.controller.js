@@ -5,26 +5,8 @@
  * Dependencies
  *
  */
-var _ = require('lodash'),
-    Sequelize = require('sequelize'),
-    models = require('../models/index'),
-    Account = require('../models/index').Account,
-    AccountsUser = require('../models/index').AccountsUser,
-    Dataset = require('../models/index').Dataset,
-    Collection = require('../models/index').Collection,
-    File = require('../models/index').File;
+var models = require('../models/index');
 
-
-function slugify(text) {
-  return text.toString().toLowerCase()
-    .split('@')[0]
-    .replace(/\s+/g, '-')        // Replace spaces with -
-    .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
-    .replace(/\-\-+/g, '-')      // Replace multiple - with single -
-    .replace(/^-+/, '')          // Trim - from start of text
-    .replace(/-+$/, '');         // Trim - from end of text
-    //limit characters
-}
 
 
 function getAccountUsers(account){
@@ -34,21 +16,21 @@ function getAccountUsers(account){
 
   console.log(account.id);
   var accounts=[];
-  account.getUsers().success(function(users){
+  account.getUsers().then(function(users){
     //console.log('users', users[0].AccountsUser.dataValues);
     for (var i=0;i<users.length;i++){
       var user = users[0];
       user.getAccounts({
         where: { primary:true }
-      }).success(function(a){
+      }).then(function(a){
         //console.log(a);
         accounts.push(a);
-      }).error(function(err){
+      }).catch(function(err){
         console.log('err',err);
       });
     }
     //console.log('aa', accounts);
-  }).error(function(err){
+  }).catch(function(err){
     console.log('err',err);
   });
 }
@@ -66,21 +48,21 @@ exports.canEdit = function(req, res, next) {
   // Check if a jwt is present
   if (req.jwt && req.jwt.sub){
     // Check if the user in the jwt exists
-    models.User.find(req.jwt.sub).success(function(user){
+    models.User.find(req.jwt.sub).then(function(user){
       if (user.admin) {
         next();
       } else {
-        user.getAccounts({ where:{ slug: req.params.id }}).success(function (accounts) {
+        user.getAccounts({ where:{ slug: req.params.id }}).then(function (accounts) {
           if (accounts && accounts.length>0){
             next();
           } else {
             return res.json({status:'err', msg:'No access. '});
           }
-        }).error(function(err){
+        }).catch(function(err){
           return handleError(res,err);
         });
       }
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
   } else {
@@ -103,14 +85,14 @@ exports.index = function(req, res) {
   // Set (default) offset
   var offset = req.query.offset | 0;
 
-  Account.findAll({
+  models.Account.findAll({
     where: filter,
     limit: limit,
     offset: offset,
     order: 'created_at DESC'
-  }).success(function(accounts) {
+  }).then(function(accounts) {
     return res.json(accounts);
-  }).error(function(err){
+  }).catch(function(err){
     console.log(err);
     return handleError(res, err);
   });
@@ -126,19 +108,19 @@ exports.index = function(req, res) {
  */
 exports.show = function(req, res) {
 
-  Account.find({
+  models.Account.find({
     where: { slug: req.params.id },
     include: [
-      { model: Collection },
+      { model: models.Collection },
       //{ model: Dataset },
-      { model: File, as: 'avatar'},
-      { model: File, as: 'headerImg'},
-      { model: File, as: 'files'}
+      { model: models.File, as: 'avatar'},
+      { model: models.File, as: 'headerImg'},
+      { model: models.File, as: 'files'}
     ]
-  }).success(function(account){
+  }).then(function(account){
     getAccountUsers(account);
     res.json(account);
-  }).error(function(err){
+  }).catch(function(err){
     console.log(err);
   });
 };
@@ -153,9 +135,9 @@ exports.show = function(req, res) {
  *
  */
 exports.create = function(req, res) {
-  Account.create(req.body).success(function(account) {
+  models.Account.create(req.body).then(function(account) {
     return res.json(201, account);
-  }).error(function(err){
+  }).catch(function(err){
     handleError(res,err);
     console.log(err);
   });
@@ -172,7 +154,7 @@ exports.create = function(req, res) {
  */
 exports.update = function(req, res) {
 
-  Account.find(req.body.id).success(function(account){
+  models.Account.find(req.body.id).then(function(account){
     // Set new avatar if needed
     if (req.body.avatar){
       account.setAvatar(req.body.avatar);
@@ -183,14 +165,14 @@ exports.update = function(req, res) {
     }
 
     //console.log('account', account);
-    account.updateAttributes(req.body).success(function(account) {
+    account.updateAttributes(req.body).then(function(account) {
       console.log('success', account.dataValues);
       res.json(account);
-    }).error(function(err) {
+    }).catch(function(err) {
       handleError(res,err);
     });
 
-  }).error(function(err){
+  }).catch(function(err){
     handleError(res,err);
   });
 };
@@ -204,7 +186,7 @@ exports.update = function(req, res) {
  *
  */
 exports.destroy = function(req, res) {
-  Account.findById(req.params.id, function (err, account) {
+  models.Account.findById(req.params.id, function (err, account) {
     if(err) { return handleError(res, err); }
     if(!account) { return res.send(404); }
     account.remove(function(err) {
@@ -217,15 +199,15 @@ exports.destroy = function(req, res) {
 
 exports.addFile = function(req,res){
   console.log(req.body);
-  Account.find(req.body.account_id).success(function(account){
+  models.Account.find(req.body.account_id).then(function(account){
     console.log('account: ', account.dataValues);
-    account.addFile(req.body.id).success(function(model){
+    account.addFile(req.body.id).then(function(model){
       console.log('model: ', model);
       return res.json({status: 'success'});
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };

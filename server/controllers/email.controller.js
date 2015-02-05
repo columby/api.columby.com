@@ -106,6 +106,8 @@ exports.register = function(vars, callback){
 
 // send a registration email to a user
 exports.login = function(vars, callback){
+  console.log('vars',vars);
+  console.log('key', config.mandrill.key);
   if (mandrill_client) {
   mandrill_client.messages.sendTemplate({
     'template_name': 'columby-notice-template',
@@ -131,7 +133,7 @@ exports.login = function(vars, callback){
         'rcpt' : vars.user.email,
         'vars': [{
           'name':'TITLE',
-          'content':'Your login token',
+          'content':'Your login token'
         },{
           'name':'MESSAGE',
           'content':'Hi!<br/>There was a request to login. Please click the button below to login. <br>Or copy and paste this url:<br>' + vars.tokenurl + '<br><br>If you did not make this request, just ignore this email.'

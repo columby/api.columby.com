@@ -10,5 +10,5 @@ module.exports = function(app) {
     router.get('/sql',
         sqlController.query);
 
-    app.use('/api/v2/data', router);
+    app.use('/v2/data', router);
 };

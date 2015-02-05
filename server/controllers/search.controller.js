@@ -20,8 +20,8 @@ exports.search = function(req, res) {
   var dataset_wheres = [];
   var _q = q.trim().split(" ");
   for(var idx=0; idx < _q.length; idx++) {
-      dataset_wheres.push({title: { ilike: "%"+_q[idx]+"%" }});
-      dataset_wheres.push({description: { ilike: "%"+_q[idx]+"%" }});
+    dataset_wheres.push({title: { ilike: "%"+_q[idx]+"%" }});
+    dataset_wheres.push({description: { ilike: "%"+_q[idx]+"%" }});
   }
 
   var account_wheres = [];
@@ -54,17 +54,21 @@ exports.search = function(req, res) {
   var weight_AccountName = [ 10, 2 ];
 
   new Sequelize.Utils.QueryChainer()
-    .add(Dataset.findAll({where: Sequelize.or.apply(null, dataset_wheres)})) // .on('sql', console.log))
+    .add(Dataset.findAll({
+      where: Sequelize.and(
+        { private: false },
+        Sequelize.or.apply(null,dataset_wheres)
+    )})) // .on('sql', console.log))
     .add(Account.findAll({where: Sequelize.or.apply(null, account_wheres)})) // .on('sql', console.log))
     .run()
-    .success(function(_results){
+    .then(function(_results){
       var results = [];
       // add datasets
       for(var idx=0; idx < _results[0].length; idx++) {
         results.push({
           title: _results[0][idx].title,
           description: _results[0][idx].description,
-          shortId: _results[ 0][ idx].shortid,
+          shortid: _results[ 0][ idx].shortid,
           weight: weightFunc(weight_DatasetTitle, _results[0][idx].title) + weightFunc(weight_DatasetDescription, _results[0][idx].description)
         });
       }
@@ -88,7 +92,7 @@ exports.search = function(req, res) {
       });
       return res.json(results);
     })
-    .error(function(err){
+    .catch(function(err){
       console.log(err);
       handleError(res, err);
     });
