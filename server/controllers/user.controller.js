@@ -281,6 +281,7 @@ exports.login = function(req,res) {
         }
       };
       emailService.login(vars, function(result){
+        console.log(result);
         console.log(user.shortid);
         if (result[0].status === 'sent') {
           return res.json({status: 'success', user: user.shortid});

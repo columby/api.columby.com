@@ -10,8 +10,10 @@ var models = require('../models/index'),
   config = require('../config/environment');
 
 
+
 /*-------------- PRIMARY DISTRIBUTION --------------------------------------------------------*/
 exports.index = function(req,res){};
+
 
 exports.show = function(req,res){};
 
@@ -23,67 +25,137 @@ exports.show = function(req,res){};
  * @param res
  */
 exports.create = function(req,res){
-  console.log('creating primary: ', req.body);
   var primary = req.body;
 
-  models.Primary.create(primary).then(function(primary) {
-    console.log('p', primary.dataValues);
-    res.json(primary.dataValues);
-    //primary.setDataset(dataset_id).then(function(primary){
-    //  console.log('p2', primary.dataValues);
-    //  primary.setDistribution(distribution_id).then(function(primary){
-    //    console.log('p3', primary.dataValues);
-    //    return res.json(primary);
-    //  }).catch(function(err){
-    //    return handleError(res,err);
-    //  });
-    //}).catch(function(err){
-    //  return handleError(res,err);
-    //});
-  }).catch(function(err){
+  // check if user has permission to create a primary for this dataset.
+  models.User.find(req.jwt.sub).then(function(user){
+
+    user.getAccounts().then(function(accounts){
+      var accountIds = [];
+      for (var i=0;i<accounts.length;i++){
+        accountIds.push(accounts[ i].dataValues.id);
+      }
+      models.Distribution.find({
+        where: { id: req.body.distribution_id },
+        include: [
+          { model: models.Dataset, as: 'dataset' }
+      ]}).then(function(distribution){
+        console.log(user.dataValues);
+        if (user.dataValues.admin || accountIds.indexOf(distribution.dataset.dataValues.account_id) !== -1) {
+          models.Primary.create(primary).then(function(primary) {
+            console.log('p', primary.dataValues);
+            res.json(primary.dataValues);
+          }).catch(function(err){
+            return handleError(res,err);
+          });
+        } else {
+          return res.json({status:'error',message:'Not authorized'});
+        }
+      }).catch(function(err){
+        return handleError(res,err);
+      });
+    }).catch(function(err){
+      return handleError(res,err);
+    })
+  }).catch(function(err) {
     return handleError(res,err);
   });
 };
+
 
 exports.update = function(req,res){
-  models.Primary.find(req.params.id).then(function(primary){
-    primary.updateAttributes(req.body).then(function(primary){
-      res.json(primary);
+  // Check if user has access
+  models.User.find(req.jwt.sub).then(function(user){
+    user.getAccounts().then(function(accounts){
+      var accountIds = [];
+      for (var i=0;i<accounts.length;i++){
+        accountIds.push(accounts[ i].dataValues.id);
+      }
+      models.Distribution.find({
+        where: { id: req.body.distribution_id },
+        include: [
+          { model: models.Dataset, as: 'dataset' }
+        ]}).then(function(distribution){
+        console.log(user.dataValues);
+        if (user.dataValues.admin || accountIds.indexOf(distribution.dataset.dataValues.account_id) !== -1) {
+          // User can access
+          models.Primary.find(req.params.id).then(function(primary){
+            primary.updateAttributes(req.body).then(function(primary){
+              res.json(primary);
+            }).catch(function(err){
+              return handleError(res,err);
+            });
+          }).catch(function(err){
+            return handleError(res,err);
+          });
+
+        } else {
+        return res.json({status:'error',message:'Not authorized'});
+      }
     }).catch(function(err){
       return handleError(res,err);
     });
   }).catch(function(err){
     return handleError(res,err);
-  });
+  })
+}).catch(function(err) {
+  return handleError(res,err);
+});
 };
 
-exports.destroy = function(req,res){
-  var id = req.params.id;
-  models.Primary.find(id).then(function(primary){
 
-    // delete the table
-    var conn = config.db.postgis;
-    pg.connect(conn, function(err,client,done){
-      if (err){
-        console.log('error connectiing: ', err);
+exports.destroy = function(req,res){
+  // check if user can edit Primary (dataset);
+  models.User.find(req.jwt.sub).then(function(user) {
+
+    user.getAccounts().then(function(accounts){
+      var accountIds = [];
+      for (var i=0;i<accounts.length;i++){
+        accountIds.push(accounts[ i].dataValues.id);
       }
-      var sql='DROP TABLE IF EXISTS primary_' +  primary.id + ';';
-      console.log('sql', sql);
-      client.query(sql, function(err,result){
-        if (err){
-          console.log(err);
+      models.Primary.find({
+        where: { id: req.params.id },
+        include: [
+          { model: models.Distribution, as: 'distribution', include: [
+            { model: models.Dataset, as: 'dataset' }
+          ] }
+        ]}).then(function(primary){
+        console.log(primary.distribution.dataset.dataValues.account_id);
+        var accountId = primary.distribution.dataset.dataValues.account_id;
+
+        if (user.dataValues.admin || accountIds.indexOf(accountId) !== -1) {
+          console.log('user can delete');
+
+          // Delete the table
+          var conn = config.db.postgis;
+          pg.connect(conn, function(err,client,done){
+            if (err){
+              console.log('error connectiing: ', err);
+            }
+            var sql='DROP TABLE IF EXISTS primary_' +  primary.id + ';';
+            console.log('sql', sql);
+            client.query(sql, function(err,result){
+              if (err){
+                console.log(err);
+              }
+              done();
+            });
+          });
+          primary.destroy().then(function(){
+            return res.json({status:'success'});
+          }).catch(function(err){
+            return handleError(res,err);
+          });
+
+        } else {
+          return res.json({status:'error', message:'Not authorized'});
         }
-        console.log(result);
-        done();
+      }).catch(function(err){
+        return handleError(res,err);
       });
-    });
-    primary.destroy().then(function(){
-      return res.json({status:'success'});
     }).catch(function(err){
       return handleError(res,err);
-    });
-  }).catch_(function(err){
-    return handleError(res,err);
+    })
   });
 };
 
@@ -95,29 +167,57 @@ exports.destroy = function(req,res){
  */
 exports.sync = function(req,res) {
 
-  // Create a new job
-  var j = {
-    type: req.body.jobType,
-    dataset_id: req.body.datasetId
-  };
-
-  models.Job.create(j).then(function(job){
-    console.log('Job ' + job.id + ' created. Updating Primary source. ');
-    // update primary source status
-    models.Primary.update({
-      jobStatus: 'active'
-    },{
-      where: {
-        id: req.body.primaryId
+  // check if user can edit Primary (dataset);
+  models.User.find(req.jwt.sub).then(function(user) {
+    user.getAccounts().then(function(accounts) {
+      var accountIds = [];
+      for (var i = 0; i < accounts.length; i++) {
+        accountIds.push(accounts[i].dataValues.id);
       }
-    }).then(function(updatedPrimary){
-      console.log('updated primary ', updatedPrimary);
-      res.json({result: updatedPrimary});
-    }).catch(function(err){
-      return handleError(res,err);
+      models.Primary.find({
+        where: {id: req.params.id},
+        include: [
+          {
+            model: models.Distribution, as: 'distribution', include: [
+            {model: models.Dataset, as: 'dataset'}
+          ]
+          }
+        ]
+      }).then(function (primary) {
+        console.log(primary.distribution.dataset.dataValues.account_id);
+        var accountId = primary.distribution.dataset.dataValues.account_id;
+
+        if (user.dataValues.admin || accountIds.indexOf(accountId) !== -1) {
+          console.log('user can sync');
+          // Create a new job
+          var j = {
+            type: req.body.jobType,
+            dataset_id: req.body.datasetId
+          };
+
+          models.Job.create(j).then(function(job){
+            console.log('Job ' + job.id + ' created. Updating Primary source. ');
+            // update primary source status
+            models.Primary.update({
+              jobStatus: 'active'
+            },{
+              where: {
+                id: req.body.primaryId
+              }
+            }).then(function(updatedPrimary){
+              console.log('updated primary ', updatedPrimary);
+              res.json({result: updatedPrimary});
+            }).catch(function(err){
+              return handleError(res,err);
+            });
+          }).catch(function(err){
+            return handleError(res,err);
+          });
+        } else {
+          return res.json({status:'error', message:'Not authorized'});
+        }
+      });
     });
-  }).catch(function(err){
-    return handleError(res,err);
   });
 };
 

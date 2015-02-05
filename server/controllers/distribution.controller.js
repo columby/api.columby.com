@@ -130,6 +130,7 @@ exports.validateLink = function(req,res){
 
   // Validate if it is a readable URL
   var url = req.body.url;
+  console.log('url',url);
 
   // get link properties
   if (!url) {
