@@ -32,9 +32,9 @@ exports.show = function(req, res) {
           { model: models.File, as:'avatar' }
         ]}
       ]
-    }).success(function(models){
+    }).then(function(models){
       return res.json(models);
-    }).error(function(err){
+    }).catch(function(err){
       return res.json(err);
     });
 };
@@ -50,9 +50,9 @@ exports.create = function(req,res){
       account_id: req.body.accountId,
       title: req.body.title
     };
-    models.Collection.create(collection).success(function(model){
+    models.Collection.create(collection).then(function(model){
       return res.json(model);
-    }).error(function(err){
+    }).catch(function(err){
       handleError(res,err);
     });
   }
@@ -62,17 +62,17 @@ exports.create = function(req,res){
 exports.update = function(req,res){
   console.log(req.body);
   if (req.body.id){
-    models.Collection.findOne(req.body.id).success(function(collection){
+    models.Collection.findOne(req.body.id).then(function(collection){
       if (!collection){
         return handleError(res, 'No collection found. ');
       } else {
-        collection.updateAttributes(req.body).success(function(updated) {
+        collection.updateAttributes(req.body).then(function(updated) {
           return res.json(updated);
-        }).error(function(err) {
+        }).catch(function(err) {
           handleError(res,err);
         });
       }
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
   } else {
@@ -89,15 +89,15 @@ exports.update = function(req,res){
  */
 exports.destroy = function(req,res){
   if (req.params.id){
-    models.Collection.findOne(req.params.id).success(function(model){
+    models.Collection.findOne(req.params.id).then(function(model){
       // todo: delete associated datasets
 
-      model.destroy().success(function(){
+      model.destroy().then(function(){
         return res.json(true);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
   } else {
@@ -121,17 +121,17 @@ exports.addDataset = function(req,res){
     return handleError(res,'no datasetId provided');
   }
 
-  models.Collection.findOne(req.params.id).success(function(collection){
-    models.Dataset.findOne(req.body.datasetid).success(function(dataset){
-      collection.addDataset(dataset).success(function(result){
+  models.Collection.findOne(req.params.id).then(function(collection){
+    models.Dataset.findOne(req.body.datasetid).then(function(dataset){
+      collection.addDataset(dataset).then(function(result){
         return res.json(result);
-      }).error(function(err){
+      }).catch(function(err){
         return res.json(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       return res.json(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
@@ -154,23 +154,23 @@ exports.removeDataset = function(req,res){
 
   console.log('removing dataset ' + req.body.datasetId + ' from ' + req.params.id);
 
-  models.Collection.findOne(req.params.id).success(function(collection){
+  models.Collection.findOne(req.params.id).then(function(collection){
     if (!collection){
       return handleError(res,'Collection not found.');
     }
-    models.Dataset.findOne(req.body.datasetId).success(function(dataset){
+    models.Dataset.findOne(req.body.datasetId).then(function(dataset){
       if (!dataset){
         return handleError(res,'Dataset not found.');
       }
-      collection.removeDataset(dataset).success(function(result){
+      collection.removeDataset(dataset).then(function(result){
         return res.json(result);
-      }).error(function(err){
+      }).catch(function(err){
         return handleError(res,err);
       });
-    }).error(function(err){
+    }).catch(function(err){
       return handleError(res,err);
     });
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };

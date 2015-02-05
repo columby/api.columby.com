@@ -35,5 +35,5 @@ module.exports = function(app) {
   //router.patch('/:id'    , controller.update);
   //router.delete('/:id'   , controller.destroy);
 
-  app.use('/api/v2/account', router);
+  app.use('/v2/account', router);
 };

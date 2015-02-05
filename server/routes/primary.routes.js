@@ -23,6 +23,7 @@ module.exports = function(app){
     controller.show);
 
   router.post('/:id/sync',
+    auth.ensureAuthenticated,
     controller.sync);
 
   router.put('/:id',
@@ -34,6 +35,6 @@ module.exports = function(app){
     controller.destroy);
 
 
-  app.use('/api/v2/primary', router);
+  app.use('/v2/primary', router);
 
 };

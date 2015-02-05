@@ -6,7 +6,6 @@
  */
 var config = require('../config/environment/index'),
     AWS = require('aws-sdk'),
-    _ = require('lodash'),
     models = require('../models/index'),
     request = require('request'),
     fileController = require('./file.controller')
@@ -36,10 +35,10 @@ exports.show = function(req,res){
  */
 exports.create = function(req,res) {
   //console.log(req.body);
-  models.Distribution.create(req.body).success(function(distribution){
+  models.Distribution.create(req.body).then(function(distribution){
     //console.log(distribution);
     res.json(distribution);
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   });
 };
@@ -54,11 +53,11 @@ exports.create = function(req,res) {
  */
 exports.update = function(req,res) {
   console.log(req.body);
-  models.Distribution.find(req.body.id).success(function(distribution){
-    distribution.updateAttributes(req.body).success(function(distribution){
+  models.Distribution.find(req.body.id).then(function(distribution){
+    distribution.updateAttributes(req.body).then(function(distribution){
       res.json(distribution);
     })
-  }).error(function(err){
+  }).catch(function(err){
     return handleError(res,err);
   })
 };
@@ -73,14 +72,14 @@ exports.update = function(req,res) {
  */
 exports.destroy = function(req,res) {
   console.log(req.params);
-  models.Distribution.find(req.params.id).success(function(distribution){
+  models.Distribution.find(req.params.id).then(function(distribution){
     if (!distribution) return res.json({ status:'error', err: 'Failed to load distribution' });
 
     // delete file if present
     if (distribution.file_id){
 
       // Find the file, delete it from s3 and db
-      models.File.find({where:{id:distribution.file_id}}).success(function(file){
+      models.File.find({where:{id:distribution.file_id}}).then(function(file){
         if (!file) {
           console.log('File not found. ');
         } else {
@@ -98,22 +97,22 @@ exports.destroy = function(req,res) {
               console.log(err);
             } else {
               // delete db entry
-              file.destroy().success(function() {
-                console.log('remove successful.');
-              }).error(function(err){
+              file.destroy().then(function() {
+                console.log('remove .thenful.');
+              }).catch(function(err){
                 console.log('err', err);
               });
             }
           });
         }
-      }).error(function(err){
+      }).catch(function(err){
         console.log(err);
       });
     }
 
-    distribution.destroy().success(function(){
-      res.json({status:'success'});
-    }).error(function(err){
+    distribution.destroy().then(function(){
+      res.json({status:'.then'});
+    }).catch(function(err){
       handleError(res,err);
     });
   });
@@ -131,6 +130,7 @@ exports.validateLink = function(req,res){
 
   // Validate if it is a readable URL
   var url = req.body.url;
+  console.log('url',url);
 
   // get link properties
   if (!url) {

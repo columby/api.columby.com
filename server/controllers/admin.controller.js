@@ -1,15 +1,13 @@
 'use strict';
 
-var _ = require('lodash');
-var User = require('../models').User,
-    Account = require('../models').Account
-;
+var models = require('../models');
+
 
 function createAccount(user){
   // Create a new account
   // User is updated automatically
   console.log('Creating source.');
-  var account = new Account({
+  var account = new models.Account({
     owner   : user._id,
     name    : user.drupal_name,
     slug    : user.drupal_name,
@@ -24,7 +22,7 @@ function createAccount(user){
 
 exports.userAccounts = function(req,res){
   console.log('check accounts');
-  User.find({})
+  models.User.find({})
     .populate('accounts', '_id, primary')
     .exec(function(err,users){
       // Check for primary publication account

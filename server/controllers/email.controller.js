@@ -105,6 +105,8 @@ exports.register = function(vars, callback){
 
 // send a registration email to a user
 exports.login = function(vars, callback){
+  console.log('vars',vars);
+  console.log('key', config.mandrill.key);
   if (mandrill_client) {
   mandrill_client.messages.sendTemplate({
     'template_name': 'columby-notice-template',

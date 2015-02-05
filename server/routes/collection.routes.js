@@ -70,5 +70,5 @@ module.exports = function(app){
     controller.removeDataset
   );
 
-  app.use('/api/v2/collection',router);
+  app.use('/v2/collection',router);
 };

@@ -7,7 +7,6 @@
  */
 var _ = require('lodash'),
     models = require('../models/index'),
-    File = models.File,
     crypto    = require('crypto'),
     config = require('../config/environment/index'),
     AWS = require('aws-sdk'),
@@ -201,7 +200,7 @@ exports.show = function(req, res) {
   console.log('File requested with id: ', req.params.id);
   console.log('File requested with style: ', req.query.style);
 
-  File.find(req.params.id).success(function (file) {
+  models.File.find(req.params.id).then(function (file) {
     if (!file || !file.id){
       return handleError(res, 'The requested image was not found.');
     }
@@ -278,7 +277,7 @@ exports.create = function(req, res) {
   var file = req.body;
   file.owner = req.user.id;
 
-  File.create(file, function(err, file) {
+  models.File.create(file, function(err, file) {
     if(err) { return handleError(res, err); }
     return res.json(201, file);
   });
@@ -292,7 +291,7 @@ exports.create = function(req, res) {
  */
 exports.update = function(req, res) {
   if(req.body._id) { delete req.body._id; }
-  File.findById(req.params.id, function (err, file) {
+  models.File.findById(req.params.id, function (err, file) {
     if (err) { return handleError(res, err); }
     if(!file) { return res.send(404); }
     var updated = _.merge(file, req.body);
@@ -311,7 +310,7 @@ exports.update = function(req, res) {
  */
 exports.destroy = function(req, res) {
   // Find the file
-  File.find({where:{id:req.file.id}}).success(function(file){
+  models.File.find({where:{id:req.file.id}}).then(function(file){
 
     // File found, delete it from s3
     var params = {
@@ -328,7 +327,7 @@ exports.destroy = function(req, res) {
       });
     });
 
-  }).error(function(err){
+  }).catch(function(err){
 
     console.log(err);
   });
@@ -391,10 +390,10 @@ exports.sign = function(req,res) {
   }
 
   // Create a File record in the database
-  File.create(file).success(function (file) {
+  models.File.create(file).then(function (file) {
     console.log('File created: ', file.dataValues);
     // Add the owner of the file (publication account)
-    file.setAccount(req.query.accountId).success(function (owner) {
+    file.setAccount(req.query.accountId).then(function (owner) {
       console.log('owner, ', owner.dataValues);
       var credentials = createS3Policy(file.dataValues);
       console.log('credentials', credentials);
@@ -407,11 +406,11 @@ exports.sign = function(req,res) {
           credentials: credentials
         });
       }
-    }).error(function (err) {
+    }).catch(function (err) {
       // delete the file again
       return handleError(res, err);
     });
-  }).error(function (error) {
+  }).catch(function (error) {
     return handleError(res, error);
   });
 };
@@ -423,17 +422,17 @@ exports.sign = function(req,res) {
  *
  */
 exports.handleS3Success = function(req,res) {
-  File.find(req.body.fileId).success(function (file) {
+  models.File.find(req.body.fileId).then(function (file) {
     file.updateAttributes({
       status: true,
       url: req.body.url
-    }).success(function(file){
+    }).then(function(file){
       //console.log(file.dataValues);
       return res.json(file);
-    }).error(function(err){
+    }).catch(function(err){
       handleError(res,err);
     });
-  }).error(function (err) {
+  }).catch(function (err) {
     handleError(res, err);
   });
 };

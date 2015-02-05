@@ -19,6 +19,6 @@ module.exports = function(app) {
   router.get('/:id',
     controller.show);
 
-  app.use('/api/v2/tag', router);
+  app.use('/v2/tag', router);
 
 };

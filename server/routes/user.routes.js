@@ -111,6 +111,6 @@ module.exports = function(app) {
    * Apply the routes to our application
    *
    */
-  app.use('/api/v2/user/', router);
+  app.use('/v2/user/', router);
 
 };

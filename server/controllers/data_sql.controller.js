@@ -2,7 +2,6 @@
 
 var pg = require('pg'),
     escape = require('pg-escape'),
-    _ = require('lodash'),
     config = require('../config/environment');
 
 
