@@ -4,27 +4,14 @@
 
 # Backend for columby.com
 
-This is the backend for [columby.com](http://columby.com). Tools used: 
-NodeJS, ExpressJS, 
+This is the backend for [columby.com](http://columby.com). 
 
-## Installation
+Tools used: 
 
-    npm install
-    copy local.settings.tmp to local.settings and edit parameters
-    grunt serve:environment
+    Node
+    Express
+    Sequelize 
+    JWT
     
-## Environment specific
-### Local
-  UI: localhost:9000
-  API: localhost:8000
-  
-### Development
-  UI: columby.dev (alias www.columby.dev
-  API: api.columby.dev
-  
-### Staging / production
-  UI: columby.com (alias www.columby.com)
-  API: api.columby.com
-  
- 
-[git-model](http://nvie.com/posts/a-successful-git-branching-model/)
+
+Version: 1.0.2
