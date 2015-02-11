@@ -8,7 +8,6 @@ if (config.mandrill.key){
   mandrill_client = new mandrill.Mandrill(config.mandrill.key);
 }
 
-
 exports.preRegister = function(vars, callback){
 
   if (mandrill_client) {
@@ -143,8 +142,8 @@ exports.login = function(vars, callback){
         },{
           'name':'LINKTITLE',
           'content': 'Login at Columby'
-        }],
-      }],
+        }]
+      }]
     }
   }, callback);
   } else {

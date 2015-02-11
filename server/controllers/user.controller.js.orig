@@ -261,7 +261,12 @@ exports.login = function(req,res) {
     include: [
       { model: models.Account }
     ]
+<<<<<<< HEAD
+  }).success(function(user) {
+    console.log('User found ', user.dataValues);
+=======
   }).then(function(user) {
+>>>>>>> refs/heads/hotfixes
     if (!user) {
       return res.json({
         status: 'not_found',
@@ -270,8 +275,12 @@ exports.login = function(req,res) {
     }
 
     // create a new logintoken
+<<<<<<< HEAD
+    Token.create({user_id: user.id}).success(function(token){
+=======
     models.Token.create({user_id: user.id}).then(function(token){
       console.log('token created', token.token);
+>>>>>>> refs/heads/hotfixes
       // Send the new token by email
       var vars = {
         tokenurl: req.protocol + '://' + req.get('host') + '/u/signin?token=' + token.token,
@@ -281,16 +290,23 @@ exports.login = function(req,res) {
         }
       };
       emailService.login(vars, function(result){
+<<<<<<< HEAD
+=======
         console.log(result);
         console.log(user.shortid);
+>>>>>>> refs/heads/hotfixes
         if (result[0].status === 'sent') {
           return res.json({status: 'success', user: user.shortid});
         } else {
           return handleError(res, { status: 'error', err: 'Error sending mail.' });
         }
       });
+<<<<<<< HEAD
+    }).error(function(err){
+=======
     }).catch(function(err){
       console.log('err', err);
+>>>>>>> refs/heads/hotfixes
       return handleError(res,err);
     });
   })
@@ -349,16 +365,27 @@ exports.verify = function(req,res) {
         }
 
         //delete the token
+<<<<<<< HEAD
+        token.destroy().success(function(res){}).error(function(err){
+          //console.log('err token delete, ', err);
+=======
         token.destroy().then(function(res){}).catch(function(err){
           console.log('err token delete, ', err);
+>>>>>>> refs/heads/hotfixes
         });
         // Send back a JWT
         return res.json({
           user: user,
           token: auth.createToken(user)
         });
+<<<<<<< HEAD
+      }).error(function (err) {
+        handleError(res, err);
+        //console.log(err);
+=======
       }).catch(function (err) {
         console.log(err);
+>>>>>>> refs/heads/hotfixes
       });
     }).catch(function (err) {
       console.log('something went wrong!');

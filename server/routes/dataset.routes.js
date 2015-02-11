@@ -11,18 +11,6 @@ module.exports = function(app){
 
   /**
    *
-   * Extract a link
-   *
-   * Roles: authenticated
-   *
-   **/
-  //router.get('/extractlink',
-  //  auth.ensureAuthenticated,
-  //  controller.extractlink);
-
-
-  /**
-   *
    * List datasets
    *
    * Public access
@@ -79,6 +67,7 @@ module.exports = function(app){
 
   router.post('/:id/tag',
     auth.ensureAuthenticated,
+
     controller.addTag);
   router.delete('/:id/tag/:tid',
     auth.ensureAuthenticated,

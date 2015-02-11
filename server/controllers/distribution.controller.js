@@ -197,10 +197,7 @@ function validateArcgis(url,cb){
 
       if (o && typeof(o) === 'object' && o !== null) {
         if (o.currentVersion && o.capabilities) {
-          console.log('valid arcgis');
-          if (String(o.currentVersion) === '10.04') {
-            return cb(true);
-          }
+          return cb(true);
         }
       }
     }

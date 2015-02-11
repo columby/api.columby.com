@@ -7,7 +7,6 @@ var pg = require('pg'),
 
 exports.query = function(req,res){
 
-    console.log(config);
     var conn = config.db.postgis;
 
     if (!conn)

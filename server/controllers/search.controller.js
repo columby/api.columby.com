@@ -66,6 +66,7 @@ exports.search = function(req, res) {
       // add datasets
       for(var idx=0; idx < _results[0].length; idx++) {
         results.push({
+          contentType: 'dataset',
           title: _results[0][idx].title,
           description: _results[0][idx].description,
           shortid: _results[ 0][ idx].shortid,
@@ -75,6 +76,7 @@ exports.search = function(req, res) {
       // add accounts
       for(var idx=0; idx < _results[1].length; idx++) {
         results.push({
+          contentType: 'account',
           title: _results[1][idx].name,
           description: '',
           weight: weightFunc(weight_AccountName, _results[0][idx].name)
