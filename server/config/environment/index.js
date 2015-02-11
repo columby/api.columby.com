@@ -17,7 +17,7 @@ var all = {
   env: process.env.NODE_ENV,
 
   // Version of the release
-  version: '1.0.2',
+  version: '1.0.3',
 
   // Root path of server
   root: path.normalize(__dirname + '/../../..'),

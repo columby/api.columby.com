@@ -1,11 +1,60 @@
 'use strict';
 
 /**
- *
  * Dependencies
- *
  */
-var models = require('../models/index');
+var models = require('../models/index'),
+  auth = require('./auth.controller'),
+  config = require('../config/environment/index'),
+  jwt = require('jwt-simple'),
+  moment = require('moment');
+
+
+// Access functions
+function canView(req, dataset, cb){
+  // everybody can view public datasets
+  if (dataset.private === false){
+    return cb(true);
+  }
+
+  // check user
+  if (req.headers.authorization){
+    console.log('checkin authorization header');
+    var token = req.headers.authorization.split(' ')[1];
+    var payload = jwt.decode(token, config.jwt.secret);
+    if (payload.exp <= moment().unix()) {
+      console.log('Token has expired');
+    }
+    // Attach user id to req
+    if (!payload.sub) {
+      return cb(false);
+    } else {
+      // account editors can view account private datasets
+      models.User.find(payload.sub).then(function(user) {
+        user.getAccounts().then(function(accounts){
+          var accountIds = [];
+          for (var i=0;i<accounts.length;i++){
+            accountIds.push(accounts[ i].dataValues.id);
+          }
+          console.log('Checking if dataset\'s ' + dataset.id + ' account (' + dataset.account.id + ') is in user account list. ', accountIds);
+          if (accountIds.indexOf(dataset.dataValues.account_id) !== -1){
+            return cb(true);
+          } else {
+            return cb(false);
+          }
+        }).catch(function(err){
+          console.log(err);
+          return cb(false);
+        });
+      }).catch(function(err){
+        console.log(err);
+        return cb(false);
+      });
+    }
+  } else {
+    return cb(false);
+  }
+}
 
 
 exports.extractlink = function(req,res) {
@@ -86,7 +135,7 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-  console.log('show dataset:', req.params.id);
+
   // Show only if status is public and user can edit the dataset.
   models.Dataset.findOne({
     where: {
@@ -103,8 +152,18 @@ exports.show = function(req, res) {
       ] },
       { model: models.Reference, as: 'references' }
     ]
-  }).then(function(dataset){
-    return res.json(dataset);
+  }).then(function(dataset) {
+    // Check accessc
+    console.log(dataset.id);
+    canView(req,dataset, function(access){
+      console.log('access', access);
+      if (access){
+        return res.json(dataset);
+      } else {
+        return handleError(res,'No access');
+      }
+    });
+
   }).catch(function(err){
     return handleError(res, err);
   });
@@ -139,6 +198,7 @@ exports.create = function(req, res) {
   });
 };
 
+
 // Updates an existing dataset in the DB.
 exports.update = function(req, res) {
 
@@ -161,6 +221,7 @@ exports.update = function(req, res) {
     handleError(res,err);
   });
 };
+
 
 // Deletes a dataset from the DB.
 exports.destroy = function(req, res) {
@@ -204,6 +265,7 @@ exports.addTag = function(req,res) {
   });
 };
 
+
 /**
  *
  * Detach a tag from a dataset
@@ -231,6 +293,8 @@ exports.removeTag = function(req,res){
     return handleError(res, {error: 'Missing id.'});
   }
 };
+
+
 
 /*-------------- DISTRIBUTIONS ---------------------------------------------------------------*/
 exports.listDistributions = function(req, res) {
@@ -313,18 +377,14 @@ exports.getReference = function(req,res){
 exports.createReference = function(req, res) {
   var id = req.params.id;
   var reference = req.body.reference;
-  console.log('id',id);
-  console.log('reference', reference);
 
   // Find the dataset to attach the reference to
   models.Dataset.find(id).then(function(dataset){
     if (!dataset){ return handleError( res, { error:'Failed to load dataset' } ); }
     // Create a db-entry for the reference
     models.Reference.create(reference).then(function(reference){
-      console.log('saved reference: ',reference);
       // Add the reference to the dataset
       dataset.addReference(reference).then(function(dataset){
-        console.log('dataset', dataset);
         res.json(dataset);
       }).catch(function(err){
         return handleError(res,err);
@@ -366,5 +426,5 @@ exports.destroyReference = function(req, res) {
 
 function handleError(res, err) {
   console.log('Dataset error,', err);
-  return res.send(500, err);
+  return res.status(500).json({status:'error', msg:err});
 }
