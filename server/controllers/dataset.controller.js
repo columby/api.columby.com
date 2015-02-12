@@ -31,6 +31,9 @@ function canView(req, dataset, cb){
     } else {
       // account editors can view account private datasets
       models.User.find(payload.sub).then(function(user) {
+        if (user.admin) {
+          return cb(true);
+        }
         user.getAccounts().then(function(accounts){
           var accountIds = [];
           for (var i=0;i<accounts.length;i++){
@@ -244,13 +247,13 @@ exports.destroy = function(req, res) {
 exports.addTag = function(req,res) {
 
   var tag = req.body.tag;
-  console.log('adding tag: ', req.body.tag);
-
   models.Tag.findOrCreate({
-    where:{
+    where: {
       text: tag.text
     }
-  }).then(function(tag, created){
+  }).spread(function(tag, created){
+    console.log('created: ', created);
+    console.log(created);
     models.Dataset.find(req.params.id).then(function (dataset) {
       dataset.addTag(tag.id).then(function (dataset) {
         return res.json({dataset: dataset});
