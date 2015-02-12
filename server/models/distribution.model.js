@@ -25,6 +25,10 @@ module.exports = function(sequelize, DataTypes) {
         values: ['localFile', 'remoteService', 'remoteFile'],
         comment: 'The type of source: uploaded file, a remote service for synchronization, a remote file for processing. '
       },
+      private: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+      },
       status: {
         type: DataTypes.ENUM,
         values: ['draft','private','public'],

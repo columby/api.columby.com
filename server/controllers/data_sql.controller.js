@@ -46,17 +46,19 @@ exports.query = function(req,res){
 
     // connect to the geo-db
     pg.connect(conn, function (err, client, done) {
-        done();
-        if (err)
-            return res.json({status: 'error', message: 'There was an error connecting to the database. '});
-        client.query(sql,function(err,result){
-            if (result && result.rows) {
-                return res.json(result.rows);
-            }
-            if (err){
-                return res.json({status:'error', message: String(err)});
-            }
-            return res.json('error');
-        });
+      done();
+      if (err) {
+        return res.json({status: 'error', message: 'There was an error connecting to the database. '});
+      }
+
+      client.query(sql,function(err,result){
+        if (result && result.rows) {
+          return res.json({status: 'success', rows: result});
+        } else if (err){
+          return res.json({status:'error', message: String(err)});
+        } else {
+          return res.json({status:'error'});
+        }
+      });
     });
 };

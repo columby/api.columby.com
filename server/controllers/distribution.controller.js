@@ -71,7 +71,7 @@ exports.update = function(req,res) {
  * @param res
  */
 exports.destroy = function(req,res) {
-  console.log(req.params);
+  console.log('Destoying datasource: ' + req.params.id);
   models.Distribution.find(req.params.id).then(function(distribution){
     if (!distribution) return res.json({ status:'error', err: 'Failed to load distribution' });
 
@@ -111,7 +111,7 @@ exports.destroy = function(req,res) {
     }
 
     distribution.destroy().then(function(){
-      res.json({status:'.then'});
+      res.json({status:'success'});
     }).catch(function(err){
       handleError(res,err);
     });
