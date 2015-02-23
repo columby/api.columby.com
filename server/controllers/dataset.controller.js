@@ -141,9 +141,7 @@ exports.show = function(req, res) {
 
   // Show only if status is public and user can edit the dataset.
   models.Dataset.findOne({
-    where: {
-      shortid: req.params.id
-    },
+    where: ['shortid=? or slug=?', req.params.id, req.params.id],
     include: [
       { model: models.Distribution, as: 'distributions' },
       { model: models.Primary, as: 'primary' },
@@ -156,17 +154,18 @@ exports.show = function(req, res) {
       { model: models.Reference, as: 'references' }
     ]
   }).then(function(dataset) {
-    // Check accessc
-    console.log(dataset.id);
+    // return if result is empty
+    if (!dataset){
+      return res.json(dataset);
+    }
+    // Check access
     canView(req,dataset, function(access){
-      console.log('access', access);
       if (access){
         return res.json(dataset);
       } else {
         return handleError(res,'No access');
       }
     });
-
   }).catch(function(err){
     return handleError(res, err);
   });
@@ -226,7 +225,10 @@ exports.update = function(req, res) {
 };
 
 
-// Deletes a dataset from the DB.
+/**
+ * Deletes a dataset from the DB.
+ * And all related content on the $sanitize
+ */
 exports.destroy = function(req, res) {
   models.Dataset.findById(req.params.id, function (err, dataset) {
     if(err) { return handleError(res, err); }

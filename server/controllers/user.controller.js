@@ -156,7 +156,8 @@ exports.register = function(req, res) {
             console.log('token created', token.token);
             // Send the new token by email
             var emailVars = {
-              tokenurl: req.protocol + '://' + req.get('host') + '/u/signin?token=' + token.token,
+              //tokenurl: req.protocol + '://' + req.get('host') + '/u/signin?token=' + token.token,
+              tokenurl: 'https://www.columby.com/u/signin?token=' + token.token,
               user: {
                 email: user.email,
                 name: user.name
@@ -274,7 +275,7 @@ exports.login = function(req,res) {
       console.log('token created', token.token);
       // Send the new token by email
       var vars = {
-        tokenurl: req.protocol + '://' + req.get('host') + '/u/signin?token=' + token.token,
+        tokenurl: 'https://www.columby.com/u/signin?token=' + token.token,
         user: {
           email: user.email,
           name: user.name
