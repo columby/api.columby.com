@@ -71,51 +71,88 @@ exports.update = function(req,res) {
  * @param res
  */
 exports.destroy = function(req,res) {
-  console.log('Destoying datasource: ' + req.params.id);
-  models.Distribution.find(req.params.id).then(function(distribution){
-    if (!distribution) return res.json({ status:'error', err: 'Failed to load distribution' });
+
+  /**
+   * Distribution is already attached to req by the auth middleware
+   * Delete the local File
+   * Delete the file entry
+   * Delete the distribution entry
+   **/
+
+  console.log('Destoying datasource: ' + req.distribution.id);
+
+  if (!req.distribution) return res.json({ status:'error', err: 'Failed to load distribution' });
+
+  if (req.distribution.file_id){
+    // Todo: delete the file from disk
+
+    // Delete the file entry
+    models.File.destroy({ where: { id: req.distribution.file_id } })
+      .then(function(result){
+        console.log('File entry ' + req.distribution.file_id + ' deleted.');
+
+        // delete the distribution entry
+        models.Distribution.destroy({where: { id: req.distribution.id } })
+          .then(function(result){
+            console.log('Distribution entry ' + req.distribution.id + 'deleted. ');
+            res.json({status:'success', msg: result});
+          })
+          .catch(function(err){
+            handleError(res,err);
+          });
+      })
+      .catch(function(err){
+        handleError(res,err);
+      });
+
+
+  } else {
+
+    // delete the distribution entry
+    models.Distribution.destroy({where: { id: req.distribution.id } })
+      .then(function(result){
+        res.json({status:'success', msg: result});
+      }).catch(function(err){
+        handleError(res,err);
+      });
+  }
+
+
 
     // delete file if present
-    if (distribution.file_id){
-
-      // Find the file, delete it from s3 and db
-      models.File.find({where:{id:distribution.file_id}}).then(function(file){
-        if (!file) {
-          console.log('File not found. ');
-        } else {
-          var key = file.url;
-          key = key.replace('https://'+config.aws.bucket+'.s3.amazonaws.com/', '');
-          // File found, delete it from s3
-          var params = {
-            Bucket: config.aws.bucket,
-            Key: key
-          };
-          // delete from s3
-          console.log('deleting ' + key);
-          s3.deleteObject(params, function (err) {
-            if (err) {
-              console.log(err);
-            } else {
-              // delete db entry
-              file.destroy().then(function() {
-                console.log('remove .thenful.');
-              }).catch(function(err){
-                console.log('err', err);
-              });
-            }
-          });
-        }
-      }).catch(function(err){
-        console.log(err);
-      });
-    }
-
-    distribution.destroy().then(function(){
-      res.json({status:'success'});
-    }).catch(function(err){
-      handleError(res,err);
-    });
-  });
+    // if (distribution.file_id) {
+    //
+    //   // Find the file, delete it from s3 and db
+    //   models.File.find({where:{id:distribution.file_id}}).then(function(file){
+    //     if (!file) {
+    //       console.log('File not found. ');
+    //     } else {
+    //       var key = file.url;
+    //       key = key.replace('https://'+config.aws.bucket+'.s3.amazonaws.com/', '');
+    //       // File found, delete it from s3
+    //       var params = {
+    //         Bucket: config.aws.bucket,
+    //         Key: key
+    //       };
+    //       // delete from s3
+    //       console.log('deleting ' + key);
+    //       s3.deleteObject(params, function (err) {
+    //         if (err) {
+    //           console.log(err);
+    //         } else {
+    //           // delete db entry
+    //           file.destroy().then(function() {
+    //             console.log('remove .thenful.');
+    //           }).catch(function(err){
+    //             console.log('err', err);
+    //           });
+    //         }
+    //       });
+    //     }
+    //   }).catch(function(err){
+    //     console.log(err);
+    //   });
+    // }
 };
 
 

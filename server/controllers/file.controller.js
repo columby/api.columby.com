@@ -12,8 +12,7 @@ var _ = require('lodash'),
     AWS = require('aws-sdk'),
     fs = require('fs'),
     gm = require('gm').subClass({ imageMagick: true }),
-    request = require('request')
-;
+    request = require('request');
 
 
 var s3 = new AWS.S3();
@@ -137,7 +136,7 @@ function uploadImage(file,callback){
  */
 function createDerivative(file, callback) {
   console.log('Creating a new derivative for: ', file);
-console.log('Getting image');
+  console.log('Getting image');
   // Get remote image and store it locally
   getImage(file, function (err, tmpFile) {
     if (err) {

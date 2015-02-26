@@ -27,6 +27,11 @@ module.exports = function(app) {
 
   router.post('/',
     auth.ensureAuthenticated,
+    // check upload limit
+    // validate upload space
+    // upload using multer middleware
+    
+    // finishUpload
       controller.create);
 
   router.put('/:id',
