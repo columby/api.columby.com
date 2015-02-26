@@ -54,8 +54,18 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-  models.Tag.find({title: req.params.title}).then(function(model){
-    res.json(model);
+  models.Tag.find({
+    where: {
+      slug: req.params.slug
+    },
+    include: [{
+      model: models.Dataset,
+      as: 'tags'}]
+    }).then(function(tag){
+
+    // add datasets
+
+    res.json(tag);
   }).catch(function(err){
     return handleError(res,err);
   });

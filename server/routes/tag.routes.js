@@ -16,7 +16,7 @@ module.exports = function(app) {
     auth.ensureAuthenticated,
     controller.create);
 
-  router.get('/:id',
+  router.get('/:slug',
     controller.show);
 
   app.use('/v2/tag', router);
