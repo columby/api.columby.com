@@ -25,7 +25,7 @@ exports.search = function(req, res) {
   }
 
   var account_wheres = [];
-  var _q = q.trim().split(" ");
+  var _q = q.trim().split(' ');
   for(var idx=0; idx < _q.length; idx++) {
       account_wheres.push({name: { ilike: "%"+_q[idx]+"%" }});
   }
@@ -78,6 +78,7 @@ exports.search = function(req, res) {
         results.push({
           contentType: 'account',
           title: _results[1][idx].name,
+          slug: _results[1][idx].slug,
           description: '',
           weight: weightFunc(weight_AccountName, _results[0][idx].name)
         });
