@@ -55,6 +55,9 @@ module.exports = function(sequelize, DataTypes) {
     },{
       classMethods: {
         associate: function(models) {
+          Primary.belongsTo(models.File, {
+            as: 'file'
+          });
           Primary.belongsTo(models.Dataset, {
             as: 'dataset'
           });
