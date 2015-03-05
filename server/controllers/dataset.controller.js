@@ -144,7 +144,9 @@ exports.show = function(req, res) {
     where: ['shortid=? or slug=?', req.params.id, req.params.id],
     include: [
       { model: models.Distribution, as: 'distributions' },
-      { model: models.Primary, as: 'primary' },
+      { model: models.Primary, as: 'primary', include: [
+        {model: models.File, as: 'file'}
+      ] },
       { model: models.Tag, as:'tags' },
       { model: models.File, as: 'headerImg'},
       { model: models.Account, as:'account', include: [
