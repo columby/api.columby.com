@@ -8,31 +8,59 @@
 var models = require('../models/index');
 
 
+/**
+ *
+ * Functions
+ *
+ */
 
-function getAccountUsers(account){
-  // fetch users from given account
-
-  // fetch primary account from user and rol for the given account
-
-  console.log(account.id);
-  var accounts=[];
-  account.getUsers().then(function(users){
-    //console.log('users', users[0].AccountsUser.dataValues);
-    for (var i=0;i<users.length;i++){
-      var user = users[0];
-      user.getAccounts({
-        where: { primary:true }
-      }).then(function(a){
-        //console.log(a);
-        accounts.push(a);
-      }).catch(function(err){
-        console.log('err',err);
-      });
-    }
-    //console.log('aa', accounts);
+// Get the primary account for a user.
+function getPrimaryAccount(user, cb){
+  console.log('Getting primary for user ' + user.id);
+  models.User.find({
+    where: {
+      id: user.id
+    },
+    include: [{
+      model: models.Account,
+      as:'account',
+      where: {
+        primary: 'true'
+      },
+      include: [{
+        model: models.File,
+        as:'avatar'
+      }]
+    }]
+  }).then(function(user){
+    //console.log('user', user.account[0].dataValues);
+    var a = user.account[ 0].dataValues;
+    a.role = a.AccountsUsers.role;
+    delete a.AccountsUsers;
+    cb(a);
   }).catch(function(err){
     console.log('err',err);
+
   });
+}
+// Get the primary account for a list of users.
+function getPrimaryAccounts(users, counter, result, cb){
+  console.log('Getting primary account counter: ' + counter);
+  console.log('The number of users is: ' + users.length);
+  getPrimaryAccount(users[ counter], function(primary){
+    console.log('primary id', primary.id);
+    result.push(primary);
+    handleGetPrimaryAccounts(users,counter,result,cb);
+  });
+}
+// Handle the primary account result.
+function handleGetPrimaryAccounts(users,counter,result,cb){
+  counter++;
+  if (counter<users.length){
+    getPrimaryAccounts(users,counter,result,cb);
+  } else {
+    cb(result);
+  }
 }
 
 
@@ -45,23 +73,43 @@ function getAccountUsers(account){
  *
  */
 exports.canEdit = function(req, res, next) {
+  console.log('Check if user can edit this account.');
   // Check if a jwt is present
   if (req.jwt && req.jwt.sub){
     // Check if the user in the jwt exists
-    models.User.find(req.jwt.sub).then(function(user){
+    models.User.find({
+      where: {
+        id: req.jwt.sub
+      },
+      include: [
+        { model: models.Account, as: 'account' }
+      ]
+    }).then(function(user){
+
+      // An admin can edit everything
       if (user.admin) {
-        next();
-      } else {
-        user.getAccounts({ where:{ slug: req.params.id }}).then(function (accounts) {
-          if (accounts && accounts.length>0){
-            next();
-          } else {
-            return res.json({status:'err', msg:'No access. '});
-          }
-        }).catch(function(err){
-          return handleError(res,err);
-        });
+        console.log('User is admin, valid!');
+        return next();
       }
+
+      // Iterate over user's accounts
+      for (var i=0; i<user.account.length; i++){
+        // Check if account is same as requested account
+        if (user.account[ i].dataValues.id === req.body.id) {
+          console.log('Account found for user, checking role');
+          // Check if account has the right role to edit.
+          var role = user.account[ i].AccountsUsers.role;
+          // User account with role owner or admin can edit an account. (not editor or viewer)
+          if ((role === 1 || 2 )) {
+            console.log('Valid role! ' + role);
+            return next();
+          }
+        }
+      }
+
+      // All failed, no access :(
+      return res.json({ status:'err', msg:'No access.' });
+
     }).catch(function(err){
       return handleError(res,err);
     });
@@ -69,6 +117,7 @@ exports.canEdit = function(req, res, next) {
     return res.json({status:'err', msg:'User not logged in'});
   }
 };
+
 
 /**
  *
@@ -83,7 +132,7 @@ exports.index = function(req, res) {
   // Set (default) limit
   var limit = req.query.limit || 10;
   // Set (default) offset
-  var offset = req.query.offset | 0;
+  var offset = req.query.offset || 0;
 
   models.Account.findAll({
     where: filter,
@@ -97,6 +146,7 @@ exports.index = function(req, res) {
     return handleError(res, err);
   });
 };
+
 
 /**
  *
@@ -113,15 +163,31 @@ exports.show = function(req, res) {
     include: [
       { model: models.Collection },
       //{ model: Dataset },
-      { model: models.File, as: 'avatar'},
-      { model: models.File, as: 'headerImg'},
-      { model: models.File, as: 'files'}
+      { model: models.File, as: 'avatar' },
+      { model: models.File, as: 'headerImg' },
+      { model: models.File, as: 'files' },
+      { model: models.User, as: 'users' }
     ]
-  }).then(function(account){
-    getAccountUsers(account);
-    res.json(account);
+  }).then(function(account) {
+    if (!account){ return account; }
+
+    var a = account.dataValues;
+    a.users = [];
+    // Get users for this account when the account is not a primary Account
+    if (!account.primary) {
+      // We know the userID, next we need to know the primary-account for this user.
+      // get account for this user
+      console.log('getting accounts: ' + account.users.length);
+      getPrimaryAccounts(account.users, 0, [], function(result){
+        a.users = result;
+        res.json(a);
+      });
+
+    } else {
+      res.json(a);
+    }
   }).catch(function(err){
-    console.log(err);
+    return handleError(res,err);
   });
 };
 
@@ -147,6 +213,7 @@ exports.create = function(req, res) {
 /**
  *
  * Updates an existing account in the DB.
+ * Access control is done in previous middleware!
  *
  * @param req
  * @param res
@@ -171,15 +238,16 @@ exports.update = function(req, res) {
     }).catch(function(err) {
       handleError(res,err);
     });
-
   }).catch(function(err){
     handleError(res,err);
   });
 };
 
+
 /**
  *
  * Deletes a account from the DB.
+ * Access control is done in previous middleware!
  *
  * @param req
  * @param res
@@ -197,6 +265,7 @@ exports.destroy = function(req, res) {
 };
 
 
+// Add a file to a user account. 
 exports.addFile = function(req,res){
   console.log(req.body);
   models.Account.find(req.body.account_id).then(function(account){
@@ -213,7 +282,9 @@ exports.addFile = function(req,res){
 };
 
 
+
+// Error handler
 function handleError(res, err) {
-  console.log('err',err);
-  return res.send(500, err);
+  console.log('Account controller error: ', err);
+  return res.status(500).json({status: 'error', msg:err});
 }
