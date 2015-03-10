@@ -9,50 +9,44 @@ var _             = require('lodash'),
     emailService  = require('../controllers/email.controller');
 
 
+
+
+function getAccounts(user, cb){
+  var u = user.dataValues;
+  u.accounts = [];
+
+  for (var i = 0; i < user.account.length; i++) {
+    var account = user.account[ i].dataValues;
+    account.role = account.AccountsUsers.dataValues.role;
+    delete account.AccountsUsers;
+    if (account.primary) {
+      u.primary = account;
+    }
+    u.accounts.push(account);
+  }
+  delete u.account;
+
+  cb(u);
+}
+
+
 /**
  *
  * Provide the currently logged in user details
  *
  */
 exports.me = function(req, res) {
-  console.log('Handling /me request. for JWT account id', req.jwt.sub);
-
-
-  // TODO:
-  //Company.findAll({
-  //  include: [ { model: Division } ],
-  //  order: [ [ Division, DepartmentDivision, 'name' ] ]
-  //});
-  models.User.find(req.jwt.sub).then(function(user) {
-    console.log('User found: ', user.id);
-    user.getAccounts({
-      include: [
-        { model: models.File, as: 'avatar'}
-      ]
-    }).then(function(accounts){
-      //console.log('get accounts: ', accounts);
-      console.log('Found '+ accounts.length + ' account(s)');
-      user = user.dataValues;
-      user.accounts = [];
-      for (var i=0; i<accounts.length; i++){
-        var account = accounts[ i].dataValues;
-        //console.log('account,', account);
-        account.role = accounts[ i].AccountsUsers.dataValues.role;
-        delete account.AccountsUsers;
-        //console.log('ava', account.avatar.dataValues);
-        //account.avatar = account.avatar.dataValues;
-        if (accounts[ i].primary) {
-          user.primary = account;
-        }
-        user.accounts.push(account);
-      }
-      return res.json(user);
-    }).catch(function(err){
-      console.log(err);
-    });
+  models.User.find({
+    where: {
+      id: req.jwt.sub },
+    include: [
+      { model: models.Account, as: 'account' }
+    ]}).then(function(user) {
+      getAccounts(user, function(_user){
+        return res.json(_user);
+      })
   }).catch(function(err){
-    console.log('something went wrong!');
-    handleError(res,err);
+    return handleError(res,err);
   });
 };
 
@@ -173,21 +167,17 @@ exports.register = function(req, res) {
               }
             });
           }).catch(function(err){
-            console.log('err', err);
             return handleError(res,err);
           });
         }).catch(function(err){
           user.destroy();
-          console.log('err',err);
-          handleError(res,err);
+          return handleError(res,err);
         });
       }).catch(function(err){
-        console.log(err);
-        handleError(res,err);
+        return handleError(res,err);
       });
     }).catch(function(err){
-      console.log(err);
-      handleError(res,err);
+      return handleError(res,err);
     });
 };
 
@@ -260,7 +250,7 @@ exports.login = function(req,res) {
       email: req.body.email
     },
     include: [
-      { model: models.Account }
+      { model: models.Account, as: 'account' }
     ]
   }).then(function(user) {
     if (!user) {
@@ -316,57 +306,50 @@ exports.verify = function(req,res) {
 
   // Check if supplied token exists and delete it after use
   models.Token.find({where:{'token': loginToken}}).then(function(token) {
+
     if (!token) {
       return res.json({status: 'error', err: 'token not found'});
     }
 
-    models.User.find(token.user_id).then(function (user) {
-      if (!user) { return res.json(user); }
-      // Make user verified if needxed
-      if (user.verified !== true) {
-        user.verified = true;
-        user.save().then(function(user){}).catch(function(err){
-          console.log('eee',err);
-        });
-      }
+    // Token found, fetch the user and associated account
+    models.User.find({
+      where: { id: token.user_id },
+      // todo: include avatar
+      include: [ { model: models.Account, as: 'account' } ] } )
+      .then(function (user) {
 
-      user.getAccounts({
-        include: [
-          {model: models.File, as: 'avatar'}
-        ]
-      }).then(function (accounts) {
-        //console.log('get accounts: ', accounts);
-        //console.log('Found ' + accounts.length + ' account(s)');
-        user = user.dataValues;
-        user.accounts = [];
-        for (var i = 0; i < accounts.length; i++) {
-          var account = accounts[i].dataValues;
-          account.role = accounts[i].AccountsUsers.dataValues.role;
-          delete account.AccountsUsers;
-          if (accounts[i].primary) {
-            user.primary = account;
-          }
-          user.accounts.push(account);
+        if (!user) { return res.json(user); }
+
+        // Make user verified if needed
+        if (user.verified !== true) {
+          user.verified = true;
+          user.save().then(function(user){}).catch(function(err){
+            return handleError(res,err);
+          });
         }
 
         //delete the token
         token.destroy().then(function(res){}).catch(function(err){
           console.log('err token delete, ', err);
         });
-        // Send back a JWT
-        return res.json({
-          user: user,
-          token: auth.createToken(user)
+
+        // Restructure associated accounts for this user.
+        getAccounts(user, function(_user){
+
+          // Send back a JWT
+          return res.json({
+            user: _user,
+            token: auth.createToken(user)
+          });
         });
+
       }).catch(function (err) {
-        console.log(err);
+        return handleError(res, err);
       });
-    }).catch(function (err) {
-      console.log('something went wrong!');
-      handleError(res, err);
     });
-  });
-};
+}
+
+
 
 
 /**

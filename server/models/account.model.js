@@ -86,6 +86,7 @@ module.exports = function(sequelize, DataTypes) {
 
           // A user can have multiple accounts with roles
           Account.hasMany(models.User, {
+            as: 'users',
             through: models.AccountsUsers
           });
 

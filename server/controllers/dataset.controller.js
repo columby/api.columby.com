@@ -7,10 +7,14 @@ var models = require('../models/index'),
   auth = require('./auth.controller'),
   config = require('../config/environment/index'),
   jwt = require('jwt-simple'),
-  moment = require('moment');
+  moment = require('moment'),
+  primaryController = require('./primary.controller'),
+  distributionController = require('./distribution.controller')
+  ;
 
 
 // Access functions
+
 function canView(req, dataset, cb){
   // everybody can view public datasets
   if (dataset.private === false){
@@ -57,6 +61,117 @@ function canView(req, dataset, cb){
   } else {
     return cb(false);
   }
+}
+
+
+function getUser(id, cb){
+  models.User.find({
+    where:{
+      id: id
+    },
+    include: [
+      { model: models.Account, as: 'account' }
+    ]
+  }).then(function(user){
+    cb(user);
+  }).catch(function(err){
+    cb(err);
+  })
+}
+
+exports.canCreate = function(req,res,next){
+  // Fetch the current user and associated accounts.
+  getUser(req.jwt.sub, function(user){
+    // An admin can edit everything
+    if (user.admin) {
+      console.log('User is admin, valid!');
+      return next();
+    }
+    // Iterate over user's accounts
+    for (var i=0; i<user.account.length; i++){
+      // Check if account is same as requested publication account for the new dataset.
+      if (user.account[ i].dataValues.id === req.body.account.id) {
+        console.log('Account found for user, checking role');
+        // Check if account has the right role to edit.
+        var role = user.account[ i].AccountsUsers.role;
+        // User account with role owner, admin can edit an account. (Not editor or viewer)
+        if (role === 1 || 2 || 3) {
+          console.log('Valid role! ' + role);
+          return next();
+        }
+      }
+    }
+    // All failed, no access :(
+    return res.json({ status:'err', msg:'No access.' });
+  })
+}
+
+
+exports.canEdit = function(req,res,next){
+  console.log(req.body);
+
+  // Fetch the current user and associated accounts.
+  getUser(req.jwt.sub, function(user){
+
+    // An admin can edit everything
+    if (user.admin) {
+      console.log('User is admin, valid!');
+      return next();
+    }
+
+    // Get the dataset's publication Account
+    models.Dataset.find({
+      where: { id: req.body.id },
+      include: [ { model: models.Account, as: 'account' }]}).then(function(dataset){
+        var datasetId = dataset.account.dataValues.id;
+        // Iterate over user's accounts
+        for (var i=0; i<user.account.length; i++){
+          // Check if account is same as requested publication account for the new dataset.
+          if (user.account[ i].dataValues.id === datasetId) {
+            console.log('Account found for user, checking role');
+            // Check if account has the right role to edit.
+            var role = user.account[ i].AccountsUsers.role;
+            // User account with role owner, admin can edit an account. (Not editor or viewer)
+            if (role === 1 || 2 || 3) {
+              console.log('Valid role! ' + role);
+              return next();
+            }
+          }
+        }
+        return res.json({ status:'err', msg:'No access.' });
+    }).catch(function(err){
+      return handleError(res,err);
+    });
+  });
+}
+
+exports.canDelete = function(req,res,next){
+  // Fetch the current user and associated accounts.
+  getUser(req.jwt.sub, function(user){
+    // An admin can edit everything
+    if (user.admin) {
+      console.log('User is admin, valid!');
+      return next();
+    }
+
+    // Iterate over user's accounts
+    for (var i=0; i<user.account.length; i++){
+      // Check if account is same as requested publication account for the new dataset.
+      if (user.account[ i].dataValues.id === req.body.account.id) {
+        console.log('Account found for user, checking role');
+        // Check if account has the right role to edit.
+        var role = user.account[ i].AccountsUsers.role;
+        // User account with role owner, admin can edit an account. (Not editor or viewer)
+        if (role === 1 || 2 || 3) {
+          console.log('Valid role! ' + role);
+          return next();
+        }
+      }
+    }
+
+    // All failed, no access :(
+    return res.json({ status:'err', msg:'No access.' });
+  });
 }
 
 
@@ -138,7 +253,6 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-
   // Show only if status is public and user can edit the dataset.
   models.Dataset.findOne({
     where: ['shortid=? or slug=?', req.params.id, req.params.id],
@@ -228,17 +342,46 @@ exports.update = function(req, res) {
 
 
 /**
+ *
  * Deletes a dataset from the DB.
- * And all related content on the $sanitize
+ * And all related content: sources, primaries, references, collections
+ *
  */
 exports.destroy = function(req, res) {
-  models.Dataset.findById(req.params.id, function (err, dataset) {
-    if(err) { return handleError(res, err); }
+  console.log('Deleteting dataset ' + req.params.id);
+
+  models.Dataset.find({
+    where: {
+      id: req.params.id
+    },
+    include: [
+      { model: models.Distribution, as: 'distributions' },
+      { model: models.Primary, as: 'primary' }
+    ]}
+    ).then(function (dataset) {
+
     if(!dataset) { return res.send(404); }
-    dataset.remove(function(err) {
-      if(err) { return handleError(res, err); }
-      return res.send(204);
+
+    if (dataset.primary) {
+      return res.json({status: 'error', msg:'Dataset has a primary source. '});
+    }
+
+    if (dataset.distributions.length >0){
+      return res.json({status: 'error', msg:'Dataset has distributions. '});
+    }
+
+    dataset.destroy().then(function(r){
+      console.log(r);
+      return res.status(204).json({status: 'success', msg: 'Dataset deleted.'})
+    }).catch(function(err){
+      handleError(res,err);
     });
+    // delete related references.
+    // delete related entries in collections.
+
+
+  }).catch(function(err){
+    if(err) { return handleError(res, err); }
   });
 };
 
