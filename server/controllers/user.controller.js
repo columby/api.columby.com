@@ -32,7 +32,7 @@ function getAccounts(user, cb){
 
 /**
  *
- * Provide the currently logged in user details
+ * Provide the currently logged in user details, including publication accounts
  *
  */
 exports.me = function(req, res) {
@@ -40,7 +40,9 @@ exports.me = function(req, res) {
     where: {
       id: req.jwt.sub },
     include: [
-      { model: models.Account, as: 'account' }
+      { model: models.Account, as: 'account', include: [
+        { model: models.File, as: 'avatar'}
+      ] }
     ]}).then(function(user) {
       getAccounts(user, function(_user){
         return res.json(_user);

@@ -181,12 +181,22 @@ exports.destroy = function(req,res){
 exports.sync = function(req,res) {
 
   // check if user can edit Primary (dataset);
-  models.User.find(req.jwt.sub).then(function(user) {
-    user.getAccounts().then(function(accounts) {
-      var accountIds = [];
-      for (var i = 0; i < accounts.length; i++) {
-        accountIds.push(accounts[i].dataValues.id);
-      }
+  models.User.find({
+    where: {
+      id: req.jwt.sub },
+      include: [
+        { model: models.Account, as: 'account' }
+      ]}).then(function(user) {
+
+        var u = user.dataValues;
+        var accountIds = [];
+
+        for (var i = 0; i < user.account.length; i++) {
+          console.log(user.account[ i]);
+          accountIds.push(user.account[ i].dataValues.id);
+        }
+
+
       models.Primary.find({
         where: {id: req.params.id},
         include: [
@@ -231,7 +241,6 @@ exports.sync = function(req,res) {
         }
       });
     });
-  });
 };
 
 
