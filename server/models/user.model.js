@@ -46,7 +46,10 @@ module.exports = function(sequelize, DataTypes) {
         associate: function(models) {
           User.hasMany(models.Token);
           // Use a specific table for extra fields (role).
-          User.hasMany(models.Account, {through: models.AccountsUsers});
+          User.hasMany(models.Account, {
+            as: 'account',
+            through: models.AccountsUsers
+          });
         }
       }
     }

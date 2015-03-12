@@ -12,10 +12,17 @@ var models = require('../models/index'),
 
 
 /*-------------- PRIMARY DISTRIBUTION --------------------------------------------------------*/
-exports.index = function(req,res){};
+/**
+ *
+ **/
+ exports.index = function(req,res){};
 
 
+/**
+ *
+ **/
 exports.show = function(req,res){};
+
 
 /**
  *
@@ -63,6 +70,9 @@ exports.create = function(req,res){
 };
 
 
+/**
+ *
+ **/
 exports.update = function(req,res){
   // Check if user has access
   models.User.find(req.jwt.sub).then(function(user){
@@ -99,11 +109,14 @@ exports.update = function(req,res){
     return handleError(res,err);
   })
 }).catch(function(err) {
-  return handleError(res,err);
-});
+    return handleError(res,err);
+  });
 };
 
 
+/**
+ *
+ **/
 exports.destroy = function(req,res){
   // check if user can edit Primary (dataset);
   models.User.find(req.jwt.sub).then(function(user) {
@@ -225,5 +238,5 @@ exports.sync = function(req,res) {
 
 function handleError(res, err) {
   console.log('Dataset error,', err);
-  return res.send(500, err);
+  return res.status(500).json({status:'error',msg:err });
 }

@@ -17,7 +17,6 @@ module.exports = function(app){
    *
    **/
   router.get('/',
-
     controller.index);
 
 
@@ -29,7 +28,6 @@ module.exports = function(app){
    *
    **/
   router.get('/:id',
-
     controller.show);
 
   /**
@@ -41,6 +39,7 @@ module.exports = function(app){
    **/
   router.post('/',
     auth.ensureAuthenticated,
+    controller.canCreate,
     controller.create);
 
   /**
@@ -52,6 +51,7 @@ module.exports = function(app){
    **/
   router.put('/:id',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.update);
 
   /**
@@ -63,14 +63,17 @@ module.exports = function(app){
    **/
   router.delete('/:id',
     auth.ensureAuthenticated,
+    controller.canDelete,
     controller.destroy);
 
   router.post('/:id/tag',
     auth.ensureAuthenticated,
-
+    controller.canEdit,
     controller.addTag);
+
   router.delete('/:id/tag/:tid',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.removeTag);
 
   /**
@@ -81,7 +84,8 @@ module.exports = function(app){
     controller.listDistributions);
 
   router.post('/:id/distribution',
-    //auth.checkJWT,
+    auth.ensureAuthenticated,
+    controller.canEdit,
     controller.createDistribution);
 
   router.get('/:id/distribution/:did',
@@ -89,10 +93,12 @@ module.exports = function(app){
 
   router.put('/:id/distribution/:did',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.updateDistribution);
 
   router.delete('/:id/distribution/:did',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.destroyDistribution);
 
   /**
@@ -104,6 +110,7 @@ module.exports = function(app){
 
   router.post('/:id/reference',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.createReference);
 
   router.get('/:id/reference/:rid',
@@ -111,10 +118,12 @@ module.exports = function(app){
 
   router.put('/:id/reference/:rid',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.updateReference);
 
   router.delete('/:id/reference/:rid',
     auth.ensureAuthenticated,
+    controller.canEdit,
     controller.destroyReference);
 
   app.use('/v2/dataset',router);

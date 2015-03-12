@@ -8,7 +8,8 @@
  */
 var config = require('../config/environment/index'),
     jwt    = require('jwt-simple'),
-    moment = require('moment')
+    moment = require('moment'),
+    models = require('../models/index')
 ;
 
 
@@ -98,7 +99,7 @@ exports.ensureAuthenticated = function(req, res, next) {
  * Validate if a user has admin rights
  */
 exports.isAdmin = function(req,res,next) {
-  models.User.find(id).then(function(user){
+  models.User.find(req.user.id).then(function(user){
     if (user && (user.roles.indexOf('admin') !== -1)) {
       req.user = user;
       next();
