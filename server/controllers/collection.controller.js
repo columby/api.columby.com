@@ -21,7 +21,7 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-  console.log(req.params.id);
+  console.log(req.params);
 
   models.Collection
     .find({
@@ -105,6 +105,69 @@ exports.destroy = function(req,res){
   }
 };
 
+
+exports.getDatasets = function(req,res){
+
+  if (!req.params.id) {
+    return res.json({status:'error', msg:'No collection id provided'});
+  }
+
+  var out = {
+    count: 0,
+    rows: []
+  };
+
+  // count
+  var sql = 'SELECT COUNT(dataset_id) from "CollectionsDatasets" WHERE collection_id=' + req.params.id;
+  models.sequelize.query(sql).then(function(result){
+    console.log(result[0].count);
+    out.count = result[ 0].count;
+
+    if (out.count === 0){
+      return res.json(out);
+    }
+
+    // Set filter
+    var filter = {
+      collection_id: req.params.id
+    }
+    // Set (default) limit
+    var limit = req.query.limit || 10;
+    // Set (default) offset
+    var offset = req.query.offset || 0;
+
+    var sql = 'SELECT "Datasets".id, "Datasets".shortid, "Datasets".title FROM "CollectionsDatasets"';
+    sql += ' LEFT JOIN "Datasets" ON "CollectionsDatasets".dataset_id="Datasets".id';
+    sql += ' WHERE "CollectionsDatasets".collection_id='+req.params.id;
+    sql += ' LIMIT ' + limit + ' OFFSET ' + offset;
+
+    console.log(sql);
+    models.sequelize.query(sql).then(function(result){
+      out.rows = result;
+      return res.json(out);
+    }).catch(function(err){
+      return handleError(res,err);
+    });
+  }).catch(function(err){
+    return handleError(res,err);
+  })
+
+
+
+  // models.CollectionsDatasets.findAndCountAll({
+  //   //where: filter,
+  //   //limit: limit,
+  //   //offset: offset,
+  //   order: 'created_at DESC',
+  //   //include: [
+  //   //  { model: models.Dataset, limit:1 }
+  //   //]
+  // }).then(function(datasets) {
+  //   return res.json(datasets);
+  // }).catch(function(err){
+  //   return handleError(res, err);
+  // });
+}
 
 /**
  *
