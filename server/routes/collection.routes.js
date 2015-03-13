@@ -59,6 +59,10 @@ module.exports = function(app){
     canEdit,
     controller.destroy);
 
+  router.get('/:id/datasets',
+    controller.getDatasets
+  );
+  
   router.post('/:id/addDataset',
     auth.ensureAuthenticated,
     canEdit,
