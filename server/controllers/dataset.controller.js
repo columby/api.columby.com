@@ -362,24 +362,30 @@ exports.destroy = function(req, res) {
 
     if(!dataset) { return res.send(404); }
 
-    if (dataset.primary) {
-      return res.json({status: 'error', msg:'Dataset has a primary source. '});
-    }
+    // if (dataset.primary) {
+    //   return res.json({status: 'error', msg:'Dataset has a primary source. '});
+    // }
 
-    if (dataset.distributions.length >0){
-      return res.json({status: 'error', msg:'Dataset has distributions. '});
-    }
+    // if (dataset.distributions.length >0){
+    //   return res.json({status: 'error', msg:'Dataset has distributions. '});
+    // }
 
+    // destroy references
+
+
+    // destroy primary
+
+
+    // destroy sources
+
+
+    // destroy dataset
     dataset.destroy().then(function(r){
       console.log(r);
       return res.status(204).json({status: 'success', msg: 'Dataset deleted.'})
     }).catch(function(err){
       handleError(res,err);
     });
-    // delete related references.
-    // delete related entries in collections.
-
-
   }).catch(function(err){
     if(err) { return handleError(res, err); }
   });
