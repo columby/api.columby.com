@@ -59,7 +59,6 @@ exports.canCreate = function(req,res,next){
  *
  ***/
 exports.canEdit = function(req,res,next){
-  console.log('some');
   console.log('Checking canEdit for distribution ' + req.params.id + ' for user id ' + req.jwt.sub);
   // user should be registered
   if (!req.jwt.sub) {
@@ -81,7 +80,7 @@ exports.canEdit = function(req,res,next){
           return res.status(401).json({status: 'Error', msg: 'Account id not found for dataset. '});
         }
         if (user.account.indexOf(result.dataset.dataValues.account_id !== -1)){
-          console.log('The user can delete this distribution! ');
+          console.log('The user can edit this distribution! ');
           req.distribution = result.dataValues;
           next();
         } else {
