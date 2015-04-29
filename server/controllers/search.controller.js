@@ -6,6 +6,14 @@ var config = require('../config/environment/index.js'),
     Sequelize = require('sequelize')
 ;
 
+/**
+
+General search
+Search datasets within a collection
+Search datasets within a publication account
+
+**/
+
 
 // Get list of searchs
 exports.search = function(req, res) {
@@ -13,7 +21,20 @@ exports.search = function(req, res) {
     handleError(res, 'error, no query provided');
   }
 
-  var q = req.query.query;
+  if (req.query.collectionId) {
+    searchCollection(req.query);
+  } else if (req.query.accountId) {
+    searchAccount(req.query);
+  } else {
+    generalSearch(req);
+  }
+};
+
+
+
+function generalSearch(params){
+
+  var q = params.query;
 
   // @todo Sequelize.or does not seem to work or I implemented it wrongly.. (marcelfw)
 
@@ -36,7 +57,7 @@ exports.search = function(req, res) {
   // start weight is weights[0]
   // every matched keyword from _q adds weights[1]
   var weightFunc = function(weights, str){
-    if (str == undefined) {
+    if (str === undefined) {
         return 0;
     }
     var weight = weights[0];
@@ -101,7 +122,18 @@ exports.search = function(req, res) {
     });
 
   //return res.json({status:"ok", query:query});
-};
+}
+
+
+
+function searchCollection(params){
+
+}
+
+
+function searchAccount(params){
+
+}
 
 
 function handleError(res, err) {
