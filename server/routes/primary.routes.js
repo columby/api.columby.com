@@ -1,38 +1,38 @@
 'use strict';
 
 var express = require('express'),
-  controller = require('../controllers/primary.controller'),
+  primaryCtrl = require('../controllers/primary.controller'),
+  primaryPerms = require('../permissions/primary.permission'),
   auth = require('../controllers/auth.controller'),
   router = express.Router();
 
 
 module.exports = function(app){
 
-  /**
-   * Primary Routes
-   *
-   **/
   router.get('/',
-    controller.index);
+    primaryCtrl.index);
 
   router.post('/',
     auth.ensureAuthenticated,
-    controller.create);
+    primaryPerms.canCreate,
+    primaryCtrl.create);
 
   router.get('/:id',
-    controller.show);
+    primaryCtrl.show);
 
   router.post('/:id/sync',
     auth.ensureAuthenticated,
-    controller.sync);
+    primaryPerms.canEdit,
+    primaryCtrl.sync);
 
   router.put('/:id',
     auth.ensureAuthenticated,
-    controller.update);
+    primaryCtrl.update);
 
   router.delete('/:id',
     auth.ensureAuthenticated,
-    controller.destroy);
+    primaryPerms.canDelete,
+    primaryCtrl.destroy);
 
 
   app.use('/v2/primary', router);
