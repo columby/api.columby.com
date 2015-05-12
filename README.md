@@ -4,14 +4,20 @@
 
 # Backend for columby.com
 
-This is the backend for [columby.com](http://columby.com). 
+This is the backend for [columby.com](http://columby.com).
 
-Tools used: 
+Tools used:
 
     Node
     Express
-    Sequelize 
+    Sequelize
     JWT
-    
+
 
 Version: 1.0.2
+
+
+
+### wercker
+Staging branch is automatically deployed to staging server
+Master branch is automatically deployed to production server
