@@ -38,17 +38,26 @@ function generalSearch(params){
 
   // @todo Sequelize.or does not seem to work or I implemented it wrongly.. (marcelfw)
 
+  // Define dataset filters
   var dataset_wheres = [];
-  var _q = q.trim().split(" ");
-  for(var idx=0; idx < _q.length; idx++) {
-    dataset_wheres.push({title: { ilike: "%"+_q[idx]+"%" }});
-    dataset_wheres.push({description: { ilike: "%"+_q[idx]+"%" }});
-  }
-
-  var account_wheres = [];
   var _q = q.trim().split(' ');
   for(var idx=0; idx < _q.length; idx++) {
-      account_wheres.push({name: { ilike: "%"+_q[idx]+"%" }});
+    dataset_wheres.push({
+      title: {
+        ilike: '%'+_q[idx]+'%'
+      }
+    });
+    dataset_wheres.push({
+      description: {
+        ilike: '%' + _q[idx] + '%'
+      }
+    });
+  }
+
+  // Define Account filters
+  var account_wheres = [];
+  for(idx=0; idx < _q.length; idx++) {
+    account_wheres.push({name: { ilike: "%"+_q[idx]+"%" }});
   }
 
   var chain = new Sequelize.Utils.QueryChainer();
@@ -75,13 +84,17 @@ function generalSearch(params){
   var weight_AccountName = [ 10, 2 ];
 
   new Sequelize.Utils.QueryChainer()
+
     .add(Dataset.findAll({
       where: Sequelize.and(
         { private: false },
         Sequelize.or.apply(null,dataset_wheres)
     )})) // .on('sql', console.log))
+
     .add(Account.findAll({where: Sequelize.or.apply(null, account_wheres)})) // .on('sql', console.log))
+
     .run()
+
     .then(function(_results){
       var results = [];
       // add datasets
@@ -131,8 +144,20 @@ function searchCollection(params){
 }
 
 
-function searchAccount(params){
+function searchAccount(params, cb) {
 
+  Dataset.findAll({
+    where: {
+      account_id: params.accountId,
+      title: {like: '%' + params.query + '%'}
+    },
+    limit: params.limit || 50,
+    offset: params.offset || 0
+  }).then(function(datasets){
+    cb(datasets);
+  }).catch(function(error){
+    cb(error);
+  })
 }
 
 
