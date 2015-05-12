@@ -42,7 +42,7 @@ deploy:
 
     - script:
         name: grunt build
-        code: ssh -i $PRIVATEKEY_PATH -l $DEPLOY_USER -p $DEPLOY_PORT -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $DEPLOY_HOST "cd $DEPLOY_PATH && grunt build-$DEPLOY_ENVIRONMENT"
+        code: ssh -i $PRIVATEKEY_PATH -l $DEPLOY_USER -p $DEPLOY_PORT -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no $DEPLOY_HOST "cd $DEPLOY_PATH && grunt build"
 
     - script:
         name: restart forever node process
