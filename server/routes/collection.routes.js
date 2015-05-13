@@ -62,7 +62,11 @@ module.exports = function(app){
   router.get('/:id/datasets',
     controller.getDatasets
   );
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> refs/heads/staging
   router.post('/:id/addDataset',
     auth.ensureAuthenticated,
     canEdit,

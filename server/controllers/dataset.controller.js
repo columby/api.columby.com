@@ -4,175 +4,11 @@
  * Dependencies
  */
 var models = require('../models/index'),
-  auth = require('./auth.controller'),
+    datasetPerms = require('../permissions/dataset.permission'),
   config = require('../config/environment/index'),
   jwt = require('jwt-simple'),
-  moment = require('moment'),
-  primaryController = require('./primary.controller'),
-  distributionController = require('./distribution.controller')
-  ;
+  moment = require('moment');
 
-
-// Access functions
-
-function canView(req, dataset, cb){
-  // everybody can view public datasets
-  if (dataset.private === false){
-    return cb(true);
-  }
-
-  // check user
-  if (req.headers.authorization){
-    console.log('checkin authorization header');
-    var token = req.headers.authorization.split(' ')[1];
-    var payload = jwt.decode(token, config.jwt.secret);
-    if (payload.exp <= moment().unix()) {
-      console.log('Token has expired');
-    }
-    // Attach user id to req
-    if (!payload.sub) {
-      return cb(false);
-    } else {
-      // account editors can view account private datasets
-      models.User.find(payload.sub).then(function(user) {
-        if (user.admin) {
-          return cb(true);
-        }
-        user.getAccounts().then(function(accounts){
-          var accountIds = [];
-          for (var i=0;i<accounts.length;i++){
-            accountIds.push(accounts[ i].dataValues.id);
-          }
-          console.log('Checking if dataset\'s ' + dataset.id + ' account (' + dataset.account.id + ') is in user account list. ', accountIds);
-          if (accountIds.indexOf(dataset.dataValues.account_id) !== -1){
-            return cb(true);
-          } else {
-            return cb(false);
-          }
-        }).catch(function(err){
-          console.log(err);
-          return cb(false);
-        });
-      }).catch(function(err){
-        console.log(err);
-        return cb(false);
-      });
-    }
-  } else {
-    return cb(false);
-  }
-}
-
-
-function getUser(id, cb){
-  models.User.find({
-    where:{
-      id: id
-    },
-    include: [
-      { model: models.Account, as: 'account' }
-    ]
-  }).then(function(user){
-    cb(user);
-  }).catch(function(err){
-    cb(err);
-  })
-}
-
-exports.canCreate = function(req,res,next){
-  // Fetch the current user and associated accounts.
-  getUser(req.jwt.sub, function(user){
-    // An admin can edit everything
-    if (user.admin) {
-      console.log('User is admin, valid!');
-      return next();
-    }
-    // Iterate over user's accounts
-    for (var i=0; i<user.account.length; i++){
-      // Check if account is same as requested publication account for the new dataset.
-      if (user.account[ i].dataValues.id === req.body.account.id) {
-        console.log('Account found for user, checking role');
-        // Check if account has the right role to edit.
-        var role = user.account[ i].AccountsUsers.role;
-        // User account with role owner, admin can edit an account. (Not editor or viewer)
-        if (role === 1 || 2 || 3) {
-          console.log('Valid role! ' + role);
-          return next();
-        }
-      }
-    }
-    // All failed, no access :(
-    return res.json({ status:'err', msg:'No access.' });
-  })
-}
-
-
-exports.canEdit = function(req,res,next){
-  console.log(req.body);
-
-  // Fetch the current user and associated accounts.
-  getUser(req.jwt.sub, function(user){
-
-    // An admin can edit everything
-    if (user.admin) {
-      console.log('User is admin, valid!');
-      return next();
-    }
-
-    // Get the dataset's publication Account
-    models.Dataset.find({
-      where: { id: req.body.id },
-      include: [ { model: models.Account, as: 'account' }]}).then(function(dataset){
-        var datasetId = dataset.account.dataValues.id;
-        // Iterate over user's accounts
-        for (var i=0; i<user.account.length; i++){
-          // Check if account is same as requested publication account for the new dataset.
-          if (user.account[ i].dataValues.id === datasetId) {
-            console.log('Account found for user, checking role');
-            // Check if account has the right role to edit.
-            var role = user.account[ i].AccountsUsers.role;
-            // User account with role owner, admin can edit an account. (Not editor or viewer)
-            if (role === 1 || 2 || 3) {
-              console.log('Valid role! ' + role);
-              return next();
-            }
-          }
-        }
-        return res.json({ status:'err', msg:'No access.' });
-    }).catch(function(err){
-      return handleError(res,err);
-    });
-  });
-}
-
-exports.canDelete = function(req,res,next){
-  // Fetch the current user and associated accounts.
-  getUser(req.jwt.sub, function(user){
-    // An admin can edit everything
-    if (user.admin) {
-      console.log('User is admin, valid!');
-      return next();
-    }
-
-    // Iterate over user's accounts
-    for (var i=0; i<user.account.length; i++){
-      // Check if account is same as requested publication account for the new dataset.
-      if (user.account[ i].dataValues.id === req.body.account.id) {
-        console.log('Account found for user, checking role');
-        // Check if account has the right role to edit.
-        var role = user.account[ i].AccountsUsers.role;
-        // User account with role owner, admin can edit an account. (Not editor or viewer)
-        if (role === 1 || 2 || 3) {
-          console.log('Valid role! ' + role);
-          return next();
-        }
-      }
-    }
-
-    // All failed, no access :(
-    return res.json({ status:'err', msg:'No access.' });
-  });
-}
 
 
 exports.extractlink = function(req,res) {
@@ -274,12 +110,13 @@ exports.show = function(req, res) {
     if (!dataset){
       return res.json(dataset);
     }
+    req.dataset = dataset;
     // Check access
-    canView(req,dataset, function(access){
-      if (access){
+    datasetPerms.canViewDataset(req, function(access){
+      if (access === true) {
         return res.json(dataset);
       } else {
-        return handleError(res,'No access');
+        return res.status(401).json({status: 'Error', msg: 'No access'});
       }
     });
   }).catch(function(err){
@@ -362,34 +199,41 @@ exports.destroy = function(req, res) {
 
     if(!dataset) { return res.send(404); }
 
-    if (dataset.primary) {
-      return res.json({status: 'error', msg:'Dataset has a primary source. '});
-    }
+    // if (dataset.primary) {
+    //   return res.json({status: 'error', msg:'Dataset has a primary source. '});
+    // }
 
-    if (dataset.distributions.length >0){
-      return res.json({status: 'error', msg:'Dataset has distributions. '});
-    }
+    // if (dataset.distributions.length >0){
+    //   return res.json({status: 'error', msg:'Dataset has distributions. '});
+    // }
 
+    // destroy references
+
+
+    // destroy primary
+
+
+    // destroy sources
+
+
+    // destroy dataset
     dataset.destroy().then(function(r){
       console.log(r);
       return res.status(204).json({status: 'success', msg: 'Dataset deleted.'})
     }).catch(function(err){
       handleError(res,err);
     });
-    // delete related references.
-    // delete related entries in collections.
-
-
   }).catch(function(err){
     if(err) { return handleError(res, err); }
   });
 };
 
 
+
+/*-------------- TAGS ---------------------------------------------------------------*/
+
 /**
- *
- * Crate and add a tag to a dataset
- *
+ * Create and add a tag to a dataset
  */
 exports.addTag = function(req,res) {
 
@@ -415,11 +259,8 @@ exports.addTag = function(req,res) {
   });
 };
 
-
 /**
- *
  * Detach a tag from a dataset
- *
  */
 exports.removeTag = function(req,res){
   console.log(req.params);
@@ -443,7 +284,6 @@ exports.removeTag = function(req,res){
     return handleError(res, {error: 'Missing id.'});
   }
 };
-
 
 
 /*-------------- DISTRIBUTIONS ---------------------------------------------------------------*/
@@ -547,11 +387,11 @@ exports.createReference = function(req, res) {
   });
 };
 
-exports.updateReference = function(req, res) {
+exports.updateReference = function(req, res) { };
 
-};
-
-// Delete a source attached to a dataset
+/**
+ * Delete a source attached to a dataset
+ **/
 exports.destroyReference = function(req, res) {
 
   var rid = req.params.rid;

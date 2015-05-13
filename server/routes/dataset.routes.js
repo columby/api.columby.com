@@ -1,7 +1,8 @@
 'use strict';
 
 var express = require('express'),
-    controller = require('../controllers/dataset.controller'),
+    datasetCtrl = require('../controllers/dataset.controller'),
+    datasetPerms = require('../permissions/dataset.permission'),
     auth = require('../controllers/auth.controller'),
     router = express.Router();
 
@@ -9,122 +10,84 @@ var express = require('express'),
 module.exports = function(app){
 
 
-  /**
-   *
-   * List datasets
-   *
-   * Public access
-   *
-   **/
   router.get('/',
-    controller.index);
+    datasetCtrl.index);
 
-
-  /**
-   *
-   * Get a dataset
-   *
-   * Public access
-   *
-   **/
   router.get('/:id',
-    controller.show);
+    datasetCtrl.show);
 
-  /**
-   *
-   * Create a new dataset
-   *
-   * Roles: authenticated
-   *
-   **/
   router.post('/',
     auth.ensureAuthenticated,
-    controller.canCreate,
-    controller.create);
+    datasetPerms.canCreate,
+    datasetCtrl.create);
 
-  /**
-   *
-   * Update a dataset
-   *
-   * Roles: authenticated
-   *
-   **/
   router.put('/:id',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.update);
+    datasetPerms.canEdit,
+    datasetCtrl.update);
 
-  /**
-   *
-   * Delete a dataset
-   *
-   * Roles: authenticated
-   *
-   **/
   router.delete('/:id',
     auth.ensureAuthenticated,
-    controller.canDelete,
-    controller.destroy);
+    datasetPerms.canDelete,
+    datasetCtrl.destroy);
 
+
+  // Dataset tags routes
   router.post('/:id/tag',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.addTag);
+    datasetPerms.canEdit,
+    datasetCtrl.addTag);
 
   router.delete('/:id/tag/:tid',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.removeTag);
+    datasetPerms.canEdit,
+    datasetCtrl.removeTag);
 
-  /**
-   * Distribution Routes
-   *
-   **/
+
+  // Distribution Routes
   router.get('/:id/distribution',
-    controller.listDistributions);
+    datasetCtrl.listDistributions);
 
   router.post('/:id/distribution',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.createDistribution);
+    datasetPerms.canEdit,
+    datasetCtrl.createDistribution);
 
   router.get('/:id/distribution/:did',
-    controller.getDistribution);
+    datasetCtrl.getDistribution);
 
   router.put('/:id/distribution/:did',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.updateDistribution);
+    datasetPerms.canEdit,
+    datasetCtrl.updateDistribution);
 
   router.delete('/:id/distribution/:did',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.destroyDistribution);
+    datasetPerms.canEdit,
+    datasetCtrl.destroyDistribution);
 
-  /**
-   * Reference Routes
-   *
-   **/
+  // Reference Routes
   router.get('/:id/reference',
-    controller.listReferences);
+    datasetCtrl.listReferences);
 
   router.post('/:id/reference',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.createReference);
+    datasetPerms.canEdit,
+    datasetCtrl.createReference);
 
   router.get('/:id/reference/:rid',
-    controller.getReference);
+    datasetCtrl.getReference);
 
   router.put('/:id/reference/:rid',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.updateReference);
+    datasetPerms.canEdit,
+    datasetCtrl.updateReference);
 
   router.delete('/:id/reference/:rid',
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.destroyReference);
+    datasetPerms.canEdit,
+    datasetCtrl.destroyReference);
+
 
   app.use('/v2/dataset',router);
 
