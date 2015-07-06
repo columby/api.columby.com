@@ -32,11 +32,14 @@ module.exports = function(sequelize, DataTypes) {
       classMethods: {
         associate: function(models) {
 
+          // An account can have multiple collection
           models.Account.hasMany(Collection);
           Collection.belongsTo(models.Account);
 
-          Collection.hasMany(models.Dataset);
-          models.Dataset.hasMany(Collection);
+          // A collection can have multiple datasets, datasets can belong to many collections (Many to many)
+          Collection.belongsToMany(models.Dataset, { through: 'collection_datasets' } );
+          models.Dataset.belongsToMany(Collection, { through: 'collection_datasets' } );
+
         }
       }
     }

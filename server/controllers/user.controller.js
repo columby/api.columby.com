@@ -11,18 +11,21 @@ var _             = require('lodash'),
 
 
 
-function getAccounts(user, cb){
+function transformAccounts(user, cb){
+  //console.log(user);
   var u = user.dataValues;
-  u.accounts = [];
+  u.organisations = [];
 
   for (var i = 0; i < user.account.length; i++) {
+    //console.log(user.account[ i].dataValues);
     var account = user.account[ i].dataValues;
-    account.role = account.AccountsUsers.dataValues.role;
+    account.role = account.UserAccounts.dataValues.role;
     delete account.AccountsUsers;
     if (account.primary) {
       u.primary = account;
+    } else {
+      u.organisations.push(account);
     }
-    u.accounts.push(account);
   }
   delete u.account;
 
@@ -38,34 +41,19 @@ function getAccounts(user, cb){
 exports.me = function(req, res) {
   models.User.find({
     where: {
-      id: req.jwt.sub },
-    include: [
-      { model: models.Account, as: 'account', include: [
-        { model: models.File, as: 'avatar'}
-      ] }
-    ]}).then(function(user) {
-      getAccounts(user, function(_user){
+      id: req.jwt.sub
+    },
+    include:
+      [{ model: models.Account, as: 'account', include:
+        [{ model: models.File, as: 'avatar'}]
+      }]
+    }).then(function(user) {
+      transformAccounts(user, function(_user){
         return res.json(_user);
       })
   }).catch(function(err){
     return handleError(res,err);
   });
-};
-
-
-exports.config = function(req,res){
-  var c = {
-    aws: {
-      publicKey : config.aws.publicKey,
-      bucket    : config.aws.bucket,
-      endpoint  : config.aws.endpoint
-    },
-    embedly: {
-      key       : config.embedly.key
-    }
-  };
-
-  return res.json(c);
 };
 
 
@@ -86,18 +74,28 @@ exports.index = function(req, res) {
 
 /**
  *
- * Get a single user by user._id
- *
- * Site admins only
- *
- * @param req.params.id
+ * Get a single user by user primary account slug
  *
  **/
 exports.show = function(req, res) {
-  models.User.findOne({_id: req.params.id}, function (err, user) {
-    console.log('user', user);
-    if(err) { return handleError(res, err); }
-    return res.json(user);
+  console.log('get user with primary account slug: ' + req.params.slug);
+  models.User.findAll({
+    include:
+      [{
+        model: models.Account,
+        as: 'account',
+        where: {
+          slug: req.params.slug
+        },
+        include:
+        [{ model: models.File, as: 'avatar'}]
+      }]
+    }).then(function(user) {
+      transformAccounts(user[0], function(_user){
+        return res.json(_user);
+      })
+  }).catch(function(err){
+    return handleError(res,err);
   });
 };
 
@@ -213,26 +211,47 @@ exports.update = function(req, res) {
  *
  * Delete an existing user.
  *
- * Admins only
- *
- * @param req.body.verified
- * @param req.body.accounts
- *
- * Delete:
  *   Delete primary account
  *   Delete User
  *   Send email to user
  *
  **/
-exports.destroy = function(req, res) {
-  models.User.findById(req.params.id, function (err, user) {
-    if(err) { return handleError(res, err); }
-    if(!user) { return res.send(404); }
-    user.remove(function(err) {
-      if(err) { return handleError(res, err); }
-      return res.send(204);
+exports.delete = function(req, res) {
+  models.User.find({
+    where: {
+      id: req.params.id
+    }
+  }).then(function(user){
+    // Fetch the users primary account
+    console.log('User: ', user);
+
+    user.getAccount({
+      where: {
+        primary: true
+      }
+    }).then(function(account){
+      console.log('account', account);
+      // delete account
+      if (account){
+        account[ 0].destroy().then(function(result){
+          console.log('Account deleted');
+          console.log(result);
+        });
+      }
+      // delete user
+      user.destroy().then(function(result){
+        console.log('User deleted');
+        console.log(result);
+        return res.json({status: 'success'});
+      });
+    }).catch(function(err){
+      console.log(err);
+      return handleError(res, err);
     });
-  });
+  }).catch(function(err){
+    console.log(err);
+    return handleError(res, err);
+  });;
 };
 
 
@@ -245,7 +264,7 @@ exports.destroy = function(req, res) {
  * @param req.body.email
  *
  **/
-exports.login = function(req,res) {
+ exports.login = function(req,res){
   console.log('Finding user ', req.body.email);
   models.User.find({
     where: {
@@ -286,8 +305,7 @@ exports.login = function(req,res) {
       console.log('err', err);
       return handleError(res,err);
     });
-  })
-  .catch(function(err){
+  }).catch(function(err){
     if (err) { return handleError(res, err); }
   });
 };
@@ -336,7 +354,7 @@ exports.verify = function(req,res) {
         });
 
         // Restructure associated accounts for this user.
-        getAccounts(user, function(_user){
+        transformAccounts(user, function(_user){
 
           // Send back a JWT
           return res.json({
@@ -352,6 +370,60 @@ exports.verify = function(req,res) {
 }
 
 
+
+/**
+ *
+ * Create a new user, with primary account
+ *
+ **/
+exports.createUser = function(user, cb) {
+  console.log('Creating new user: ', user);
+  models.User.create(user).then(function(newUser){
+    // Create primary account for the new user.
+    var account = user.account;
+    account.primary = true;
+    console.log('creating account: ', account);
+    models.Account.create(account).then(function(newAccount){
+      // Create the connection between the user and the account.
+      newUser.addAccount(newAccount, {role: 1}).then(function(){
+        newUser.primary = newAccount.dataValues;
+        // Send back the user
+        cb(newUser);
+      });
+    }).catch(function(err){
+      console.log(err);
+      cb(err); });
+  });
+}
+
+
+/**
+ *
+ * Fetch an existing user by email
+ *
+ **/
+exports.getUserByEmail = function(email,cb){
+  models.User.find({
+    where:{
+      email:email
+    },
+    include: [
+      { model: models.Account, as: 'account', include: [
+        { model: models.File, as: 'avatar'}
+      ]}
+    ]
+    }).then(function(user){
+      if (!user){
+        cb({user: {}});
+      } else {
+        user = transformAccounts(user, function(user){
+          cb({user: user});
+        });
+      }
+    }).catch(function(err){
+      cb({error:err});
+    });
+}
 
 
 /**

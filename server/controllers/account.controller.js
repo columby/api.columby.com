@@ -65,61 +65,6 @@ function handleGetPrimaryAccounts(users,counter,result,cb){
 
 
 /**
- * Check if a user can edit a requested publication account.
- *
- * @param req
- * @param res
- * @param next
- *
- */
-exports.canEdit = function(req, res, next) {
-  console.log('Check if user can edit this account.');
-  // Check if a jwt is present
-  if (req.jwt && req.jwt.sub){
-    // Check if the user in the jwt exists
-    models.User.find({
-      where: {
-        id: req.jwt.sub
-      },
-      include: [
-        { model: models.Account, as: 'account' }
-      ]
-    }).then(function(user){
-
-      // An admin can edit everything
-      if (user.admin) {
-        console.log('User is admin, valid!');
-        return next();
-      }
-
-      // Iterate over user's accounts
-      for (var i=0; i<user.account.length; i++){
-        // Check if account is same as requested account
-        if (user.account[ i].dataValues.id === req.body.id) {
-          console.log('Account found for user, checking role');
-          // Check if account has the right role to edit.
-          var role = user.account[ i].AccountsUsers.role;
-          // User account with role owner or admin can edit an account. (not editor or viewer)
-          if ((role === 1 || 2 )) {
-            console.log('Valid role! ' + role);
-            return next();
-          }
-        }
-      }
-
-      // All failed, no access :(
-      return res.json({ status:'err', msg:'No access.' });
-
-    }).catch(function(err){
-      return handleError(res,err);
-    });
-  } else {
-    return res.json({status:'err', msg:'User not logged in'});
-  }
-};
-
-
-/**
  *
  * Get list of accounts
  *
@@ -157,35 +102,58 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
+  console.log('Show account with slug: ' + req.params.slug);
 
+  // Find the account and related data
   models.Account.find({
-    where: { slug: req.params.id },
+    plain: true,
+    where: { slug: req.params.slug },
     include: [
-      { model: models.Collection },
-      //{ model: Dataset },
       { model: models.File, as: 'avatar' },
       { model: models.File, as: 'headerImg' },
       { model: models.File, as: 'files' },
-      { model: models.User, as: 'users' }
+      { model: models.User, as: 'users', include: [
+        { model: models.Account, as: 'account', where: { primary: true }, include: [
+          { model: models.File, as: 'avatar' },
+        ] }
+      ]
+      }
     ]
   }).then(function(account) {
-    if (!account){ return account; }
+    console.log(account);
+    var a = {
+      id: account.dataValues.id,
+      shortid: account.dataValues.shortId,
+      displayName: account.dataValues.displayName,
+      slug: account.dataValues.slug,
+      email: account.dataValues.email,
+      description: account.dataValues.description,
+      primary: account.dataValues.primary,
+      contact: account.dataValues.contact,
+      url: account.dataValues.url,
+      location: account.dataValues.location,
 
-    var a = account.dataValues;
-    a.users = [];
-    // Get users for this account when the account is not a primary Account
-    if (!account.primary) {
-      // We know the userID, next we need to know the primary-account for this user.
-      // get account for this user
-      console.log('getting accounts: ' + account.users.length);
-      getPrimaryAccounts(account.users, 0, [], function(result){
-        a.users = result;
-        res.json(a);
-      });
-
-    } else {
-      res.json(a);
+      avatar: account.avatar,
+      headerImg: account.headerImg,
+      files: account.files,
+      people: []
     }
+
+    for (var i=0; i<account.users.length;i++){
+      var u = account.users[ i].dataValues.account[0].dataValues;
+      u.role = account.users[ i].UserAccounts.dataValues.role;
+      delete u.UserAccounts;
+      delete u.plan;
+      delete u.uuid;
+      a.people.push(u);
+    }
+
+    //console.log(a);
+
+    return res.json({
+      status: 'success',
+      account: a
+    });
   }).catch(function(err){
     return handleError(res,err);
   });
@@ -221,7 +189,7 @@ exports.create = function(req, res) {
  */
 exports.update = function(req, res) {
 
-  models.Account.find(req.body.id).then(function(account){
+  models.Account.findById(req.body.id).then(function(account){
     // Set new avatar if needed
     if (req.body.avatar){
       account.setAvatar(req.body.avatar);
@@ -265,7 +233,7 @@ exports.destroy = function(req, res) {
 };
 
 
-// Add a file to a user account. 
+// Add a file to a user account.
 exports.addFile = function(req,res){
   console.log(req.body);
   models.Account.find(req.body.account_id).then(function(account){
@@ -285,6 +253,13 @@ exports.addFile = function(req,res){
 
 // Error handler
 function handleError(res, err) {
-  console.log('Account controller error: ', err);
-  return res.status(500).json({status: 'error', msg:err});
+  console.log('Account controller error: ', err.name);
+  if (err.name === 'SequelizeUniqueConstraintError') {
+    return res.json({
+      status: 'error',
+      msg: err.errors
+    })
+  } else {
+    return res.status(500).json({status: 'error', msg:err});
+  }
 }

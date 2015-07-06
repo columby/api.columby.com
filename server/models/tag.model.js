@@ -48,10 +48,15 @@ module.exports = function(sequelize, DataTypes) {
     },{
       classMethods: {
         associate: function(models) {
-          Tag.hasMany(models.Dataset,{as:'tags'});
-          models.Dataset.hasMany(Tag,{as:'tags'});
-
-
+          // Tag can belong to many datasets (many to many)
+          Tag.belongsToMany(models.Dataset,{
+            through: 'dataset_tags',
+            as:'tags'
+          });
+          models.Dataset.belongsToMany(Tag,{
+            through: 'dataset_tags',
+            as:'tags'
+          });
         }
       }
     }

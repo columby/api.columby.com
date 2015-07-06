@@ -22,6 +22,10 @@ module.exports = {
     secret: process.env.JWT_SECRET
   },
 
+  oauth: {
+    googleSecret: process.env.GOOGLE_SECRET,
+  },
+
   mandrill : {
     key:    process.env.MANDRILL_API_KEY
   },

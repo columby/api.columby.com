@@ -16,6 +16,18 @@ module.exports = function(sequelize, DataTypes) {
         type: DataTypes.STRING,
         unique: true
       },
+
+      // login type (email, facebook, google, etc).
+      provider: {
+        type      : DataTypes.STRING,
+        allowNull : false,
+      },
+
+      // id based on login type. null for email login.
+      providerId: {
+        type      : DataTypes.STRING
+      },
+
       email : {
         type      : DataTypes.STRING,
         allowNull : false,
@@ -24,14 +36,22 @@ module.exports = function(sequelize, DataTypes) {
           isEmail: true
         }
       },
+
       verified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
       },
+
+      status: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+      },
+
       admin: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
       },
+
       drupal_uuid:{
         type: DataTypes.STRING
       },
@@ -46,9 +66,9 @@ module.exports = function(sequelize, DataTypes) {
         associate: function(models) {
           User.hasMany(models.Token);
           // Use a specific table for extra fields (role).
-          User.hasMany(models.Account, {
+          User.belongsToMany(models.Account, {
             as: 'account',
-            through: models.AccountsUsers
+            through: models.UserAccounts
           });
         }
       }
@@ -63,7 +83,7 @@ module.exports = function(sequelize, DataTypes) {
   User.afterCreate( function(model) {
     model.updateAttributes({
       shortid: hashids.encode(parseInt(String(Date.now()) + String(model.id)))
-    }).success(function(){}).error(function(){});
+    })
   });
 
   return User;

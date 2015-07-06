@@ -7,7 +7,7 @@ module.exports = function(sequelize, DataTypes) {
    * Schema definition
    *
    */
-  var AccountsUsers = sequelize.define('AccountsUsers', {
+  var UserAccounts = sequelize.define('UserAccounts', {
 
     id: {
       type: DataTypes.INTEGER,
@@ -31,5 +31,5 @@ module.exports = function(sequelize, DataTypes) {
 
   });
 
-  return AccountsUsers ;
+  return UserAccounts ;
 };

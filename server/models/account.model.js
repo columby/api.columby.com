@@ -29,26 +29,61 @@ module.exports = function(sequelize, DataTypes) {
    */
   var Account = sequelize.define('Account',
     {
-      uuid: {
-        type: DataTypes.UUID
-      },
       shortid: {
         type: DataTypes.STRING,
         unique: true
       },
-      name: {
-        type: DataTypes.STRING
+
+      // Public displayname
+      displayName: {
+        type: DataTypes.STRING,
+        required: true,
+        unique: true
       },
+
+      // automatically generated slug
       slug: {
+        type: DataTypes.STRING,
+        unique: true
+      },
+
+      // Public email
+      email: {
         type: DataTypes.STRING
       },
+
+      // Public description
       description: {
         type: DataTypes.TEXT
       },
+
+      // This account is a primary account for a user or not
       primary: {
         type: DataTypes.BOOLEAN,
         defaultValue: false
       },
+
+      plan: {
+        type:DataTypes.STRING,
+        defaultValue: 'free'
+      },
+
+      contact: {
+        type: DataTypes.TEXT
+      },
+
+      url: {
+        type: DataTypes.STRING
+      },
+
+      location: {
+        type: DataTypes.STRING
+      },
+
+      uuid: {
+        type: DataTypes.UUID
+      },
+
       created_at:{
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
@@ -74,20 +109,20 @@ module.exports = function(sequelize, DataTypes) {
           });
 
           // An account can have files attached
-          Account.hasMany(models.File, {
+          Account.belongsToMany(models.File, {
             through: 'AccountFiles',
             as: 'files'
           });
-          models.File.hasMany(Account, {
+          models.File.belongsToMany(Account, {
             through: 'AccountFiles',
             as: 'accountFiles'
           });
 
 
           // A user can have multiple accounts with roles
-          Account.hasMany(models.User, {
+          Account.belongsToMany(models.User, {
             as: 'users',
-            through: models.AccountsUsers
+            through: models.UserAccounts
           });
 
           Account.hasMany(models.Dataset);
@@ -105,7 +140,7 @@ module.exports = function(sequelize, DataTypes) {
    *
    */
   Account.beforeCreate( function(account, fn){
-    account.slug = slugify(account.name);
+    account.slug = slugify(account.displayName);
   });
 
   /**
@@ -117,7 +152,7 @@ module.exports = function(sequelize, DataTypes) {
     if (!account.shortId) {
       account.updateAttributes({
         shortid: hashids.encode(parseInt(String(Date.now()) + String(account.id)))
-      }).success(function(){}).error(function(){});
+      });
     }
   });
 

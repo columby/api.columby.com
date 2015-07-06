@@ -50,7 +50,6 @@ function getDataset(id, cb){
  * Check to see if a user can view a specific dataset
  *
  ***/
-
 exports.canViewDataset = function(req,cb) {
 
   // everybody can view public datasets
