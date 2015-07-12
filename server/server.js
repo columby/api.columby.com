@@ -21,7 +21,7 @@ process.env.NODE_ENV = process.env.NODE_ENV || 'development';
  *
  */
 var express = require('express'),
-    config = require('./config/environment');
+    config = require('./config/config');
 
 
 /**

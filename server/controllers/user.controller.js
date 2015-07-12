@@ -4,7 +4,7 @@ var _             = require('lodash'),
 
     models        = require('../models/index'),
 
-    config        = require('../config/environment/index'),
+    config        = require('../config/config'),
     auth          = require('../controllers/auth.controller'),
     emailService  = require('../controllers/email.controller');
 

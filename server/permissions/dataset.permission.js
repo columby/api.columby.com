@@ -5,7 +5,7 @@ var models = require('../models/index'),
     User = models.User,
     Account = models.Account,
     authCtrl = require('../controllers/auth.controller'),
-    config = require('../config/environment/index'),
+    config = require('../config/config'),
     jwt = require('jwt-simple'),
     moment = require('moment');
 

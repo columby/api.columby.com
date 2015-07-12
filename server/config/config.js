@@ -1,17 +1,14 @@
-'use strict';
+// All configuration with environment variables. Loaded by forever script or with foreman with local development.
 
-// Production specific configuration
-// =================================
+var path = require('path');
+
 module.exports = {
-  // Server IP
-  ip:       process.env.OPENSHIFT_NODEJS_IP ||
-            process.env.IP ||
-            undefined,
 
-  // Server port
-  port:     process.env.OPENSHIFT_NODEJS_PORT ||
-            process.env.NODE_API_PORT ||
-            8000,
+  root: path.normalize(__dirname + '/../..'),
+
+  env: process.env.NODE_ENV || 'development',
+
+  port: process.env.NODE_API_PORT || 8000,
 
   db:{
     uri: process.env.DATABASE_URL,
@@ -27,10 +24,9 @@ module.exports = {
   },
 
   mandrill : {
-    key:    process.env.MANDRILL_API_KEY
+    key: process.env.MANDRILL_API_KEY
   },
 
-  // Amazon AWS S3 File Storage
   aws: {
     publicKey : process.env.AWS_ACCESS_KEY_ID,
     secretKey : process.env.AWS_SECRET_ACCESS_KEY,
@@ -39,6 +35,6 @@ module.exports = {
   },
 
   embedly: {
-    key       : process.env.EMBEDLY_KEY
+    key : process.env.EMBEDLY_KEY
   }
 };

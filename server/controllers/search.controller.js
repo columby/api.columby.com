@@ -1,6 +1,6 @@
 'use strict';
 
-var config = require('../config/environment/index.js'),
+var config = require('../config/config'),
     Dataset = require('../models/index').Dataset,
     Account = require('../models/index').Account,
     Sequelize = require('sequelize')

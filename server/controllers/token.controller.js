@@ -2,7 +2,7 @@
 
 var jwt = require('jwt-simple'),
     moment = require('moment'),
-    config        = require('../config/environment/index');
+    config        = require('../config/config');
 
 
 /*

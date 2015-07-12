@@ -5,7 +5,7 @@
  */
 var models = require('../models/index'),
     datasetPerms = require('../permissions/dataset.permission'),
-  config = require('../config/environment/index'),
+  config = require('../config/config'),
   jwt = require('jwt-simple'),
   moment = require('moment');
 

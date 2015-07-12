@@ -8,7 +8,7 @@
 var _ = require('lodash'),
     models = require('../models/index'),
     crypto    = require('crypto'),
-    config = require('../config/environment/index'),
+    config = require('../config/config'),
     AWS = require('aws-sdk'),
     fs = require('fs'),
     gm = require('gm').subClass({ imageMagick: true }),

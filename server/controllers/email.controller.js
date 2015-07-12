@@ -1,7 +1,7 @@
 'use strict';
 
 var mandrill = require('mandrill-api/mandrill'),
-    config = require('../config/environment');
+    config = require('../config/config');
 
 var mandrill_client;
 if (config.mandrill.key){
