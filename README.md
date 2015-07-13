@@ -1,23 +1,48 @@
-[![Stories in Ready](https://badge.waffle.io/columby/api.columby.com.png?label=ready&title=Ready)](http://waffle.io/columby/api.columby.com)
+# API for columby.com
 
-[![Code Climate](https://codeclimate.com/github/columby/api.columby.com/badges/gpa.svg)](https://codeclimate.com/github/columby/api.columby.com)
-
-# Backend for columby.com
-
+## About
 This is the backend for [columby.com](http://columby.com).
 
-Tools used:
+## Technology used
+The Columby API is built with the following great (open source) technology:
+  * [Digital Ocean Server](http://digitalocean.com)
+  * [Ubuntu 14.0.4 LTS](http://releases.ubuntu.com/14.04/)
+  * [NodeJS](http://nodejs.org)
+  * [GruntJS](http://gruntjs.com)
+  * [Express](http://expressjs.com) - Web server
+  * [Sequelize](http://sequelizejs.com) - Database communication
+  * [Node JWT simple](https://github.com/hokaccha/node-jwt-simple) - User authentication
+  * [Postgresql with postGIS](http://postgis.net) - Main database with excellent geo-support
+  * [Forever](https://github.com/foreverjs/forever) - A simple CLI tool for ensuring that a given script runs continuously (i.e. forever)  
+  * [NGINX](http://nginx.org)
+  * Cron  
+  * [Upstart](http://upstart.ubuntu.com/)
 
-    Node
-    Express
-    Sequelize
-    JWT
+
+## Workflow
+Development - Staging - Production  
+All development and pull-requests are handled in the development branch.  
+[Wercker](http://www.wercker.com) is used to build and deploy automatically when new code is pushed to a branch.
+### Development
+To run the API locally, use [Foreman](https://github.com/ddollar/foreman) (provided with the [Heroku Toolbelt](https://toolbelt.heroku.com/)) to start the process. A .env file is required with the proper environment variables.
+### Staging / Production
+Create a production version with Grunt:
+
+    grunt build (for production version, using production database)
+    grunt build:staging (for development/staging version, using staging database)
+Serve the ./dist/server folder using foreman, or the columby-api upstart process.
+
+    start columby-api
 
 
-Version: 1.0.2
+## Installation
+* Create a new Digital Ocean Droplet with Ubuntu 14.04.
+* Run the install script ./install/install.sh This will create the user and required folders and install the software.  
 
 
+    sh ./install/install.sh
 
-### wercker
-Staging branch is automatically deployed to staging server
-Master branch is automatically deployed to production server
+
+## Contact
+Email: [admin@columby.com](mailto:admin@columby.com)  
+Github: [Github issues](https://github.com/columby/api.columby.com/issues)
