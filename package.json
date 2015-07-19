@@ -2,6 +2,10 @@
   "name": "columby-api",
   "version": "1.0.6",
   "main": "server/app.js",
+  "apidoc": {
+    "title": "Custom apiDoc browser title",
+    "url" : "https://api.github.com/v1"
+  },
   "dependencies": {
     "aws-sdk": "2.1.36",
     "basic-auth": "1.0.3",
