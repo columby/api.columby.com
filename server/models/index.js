@@ -15,12 +15,11 @@ var sequelize = new Sequelize(config.db.cms.uri, {
     logging: false,
     define: {
       underscored: true,
-      timestamps: true,
-      createdAt: false
+      timestamps: true
     }
   }
 );
-
+sequelize.sync();
 
 /**
  *

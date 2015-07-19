@@ -103,27 +103,69 @@ exports.canViewDataset = function(req,cb) {
 
 /***
  *
- * Check to see if a user can view a specific dataset
+ * Check to see if a user can create a specific dataset
  *
  ***/
-exports.canCreate = function(req,res,next){
-  // Fetch the current user and associated accounts.
-  getUser(req.jwt.sub, function(user){
-    if (!user){
-      return res.status(401).json({status: 'Error', msg: 'No access'});
+exports.canCreate = function(req,res,next) {
+
+  console.log('validating dataset.canCreate');
+
+  if (!req.jwt || !req.jwt.sub) {
+    return res.status(401).json({status: 'Error', msg: 'No access token provided'});
+  }
+
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({status: 'Error', msg: 'No user found'});
+  }
+
+  // An admin can edit everything
+  if (req.user.admin) {
+    console.log('User is admin');
+    return next();
+  }
+
+  // Iterate over user's accounts
+  for (var i=0; i<user.account.length; i++){
+    // Check if account is same as requested publication account for the new dataset.
+    if (user.account[ i].dataValues.id === req.body.account.id) {
+      console.log('Account found for user, checking role');
+      // Check if account has the right role to edit.
+      var role = user.account[ i].AccountsUsers.role;
+      // User account with role owner, admin can edit an account. (Not editor or viewer)
+      if (role === 1 || 2 || 3) {
+        console.log('Valid role: ' + role);
+        return next();
+      }
     }
-    // An admin can edit everything
-    if (user.admin) {
-      console.log('User is admin, valid!');
+  }
+  // All failed, no access :(
+  return res.status(401).json({status: 'Error', msg: 'No access'});
+}
+
+
+exports.canEdit = function(req,res,next){
+
+  console.log('validating dataset.canEdit');
+
+  if (!req.jwt || !req.jwt.sub) { return res.status(401).json({status: 'Error', msg: 'No access token provided'}); }
+  if (!req.user || !req.user.id) { return res.status(401).json({status: 'Error', msg: 'No user found'}); }
+  if (req.user.admin) { return next(); }
+
+  // Get the dataset's publication Account
+  models.Dataset.findById(req.params.id, {
+    include: [ { model: models.Account, as: 'account' }]
+  }).then(function(dataset){
+    if (req.user.primary.id === dataset.dataValues.account_id) {
+      console.log('dataset_account is users primary');
       return next();
     }
     // Iterate over user's accounts
-    for (var i=0; i<user.account.length; i++){
+    for (var i=0; i<req.user.organisations.length; i++){
       // Check if account is same as requested publication account for the new dataset.
-      if (user.account[ i].dataValues.id === req.body.account.id) {
+      if (req.user.organisations[ i].id === dataset.dataValues.account_id) {
         console.log('Account found for user, checking role');
         // Check if account has the right role to edit.
-        var role = user.account[ i].AccountsUsers.role;
+        var role = req.user.account[ i].AccountsUsers.role;
         // User account with role owner, admin can edit an account. (Not editor or viewer)
         if (role === 1 || 2 || 3) {
           console.log('Valid role! ' + role);
@@ -131,51 +173,11 @@ exports.canCreate = function(req,res,next){
         }
       }
     }
-    // All failed, no access :(
-    return res.status(401).json({status: 'Error', msg: 'No access'});
-  });
-}
-
-
-exports.canEdit = function(req,res,next){
-  console.log(req.body);
-
-  // Fetch the current user and associated accounts.
-  getUser(req.jwt.sub, function(user){
-
-    if (!user){
-      return res.status(401).json({status: 'Error', msg: 'No access'});
-    }
-
-    // An admin can edit everything
-    if (user.admin) {
-      console.log('User is admin, valid!');
-      return next();
-    }
-
-    // Get the dataset's publication Account
-    models.Dataset.find({
-      where: { id: req.body.id },
-      include: [ { model: models.Account, as: 'account' }]}).then(function(dataset){
-        var datasetId = dataset.account.dataValues.id;
-        // Iterate over user's accounts
-        for (var i=0; i<user.account.length; i++){
-          // Check if account is same as requested publication account for the new dataset.
-          if (user.account[ i].dataValues.id === datasetId) {
-            console.log('Account found for user, checking role');
-            // Check if account has the right role to edit.
-            var role = user.account[ i].AccountsUsers.role;
-            // User account with role owner, admin can edit an account. (Not editor or viewer)
-            if (role === 1 || 2 || 3) {
-              console.log('Valid role! ' + role);
-              return next();
-            }
-          }
-        }
-        return res.json({ status:'err', msg:'No access.' });
-    }).catch(function(err){
-      return res.status(401).json({status: 'Error', msg: err});
-    });
+    // Otherwise no access
+    return res.json({ status:'err', msg:'No access.' });
+  }).catch(function(err){
+    console.log('err', err);
+    return res.status(401).json({status: 'Error', msg: JSON.stringify(err)});
   });
 }
 

@@ -84,7 +84,11 @@ module.exports = function(sequelize, DataTypes) {
   Dataset.afterCreate( function(model) {
     model.updateAttributes({
       shortid: hashids.encode(parseInt(String(Date.now()) + String(model.id)))
-    }).success(function(){}).error(function(){});
+    }).then(function(result){
+      console.log('[Model Dataset] - Shortid created: ' + result.shortid);
+    }).catch(function(){
+      console.log('[Model Dataset] - Shortid error: ', err);
+    });
   });
 
   return Dataset;

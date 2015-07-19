@@ -17,16 +17,22 @@ module.exports = function(app){
     datasetCtrl.show);
 
   router.post('/',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canCreate,
     datasetCtrl.create);
 
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.update);
 
   router.delete('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canDelete,
     datasetCtrl.destroy);
@@ -34,11 +40,15 @@ module.exports = function(app){
 
   // Dataset tags routes
   router.post('/:id/tag',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.addTag);
 
   router.delete('/:id/tag/:tid',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.removeTag);
@@ -49,6 +59,8 @@ module.exports = function(app){
     datasetCtrl.listDistributions);
 
   router.post('/:id/distribution',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.createDistribution);
@@ -57,37 +69,18 @@ module.exports = function(app){
     datasetCtrl.getDistribution);
 
   router.put('/:id/distribution/:did',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.updateDistribution);
 
   router.delete('/:id/distribution/:did',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
     datasetPerms.canEdit,
     datasetCtrl.destroyDistribution);
-
-  // Reference Routes
-  router.get('/:id/reference',
-    datasetCtrl.listReferences);
-
-  router.post('/:id/reference',
-    auth.ensureAuthenticated,
-    datasetPerms.canEdit,
-    datasetCtrl.createReference);
-
-  router.get('/:id/reference/:rid',
-    datasetCtrl.getReference);
-
-  router.put('/:id/reference/:rid',
-    auth.ensureAuthenticated,
-    datasetPerms.canEdit,
-    datasetCtrl.updateReference);
-
-  router.delete('/:id/reference/:rid',
-    auth.ensureAuthenticated,
-    datasetPerms.canEdit,
-    datasetCtrl.destroyReference);
-
 
   app.use('/v2/dataset',router);
 

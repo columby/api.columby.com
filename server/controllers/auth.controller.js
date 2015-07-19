@@ -19,7 +19,7 @@ var config = require('../config/config'),
 /**
  *
  * Check if a user's jwt token is present
- * And add the user id to req
+ * And add the contents to req.
  *
  */
 exports.validateJWT = function(req,res,next){
@@ -51,12 +51,11 @@ exports.validateJWT = function(req,res,next){
  *
  */
 exports.validateUser = function(req,res,next) {
-  console.log('Validating User. ');
 
   req.user = req.user || {};
 
-  // fetch user if not present
-  if (!req.user.id){
+  // fetch user if not present and JWT is present
+  if ( (!req.user.id) && (req.jwt.sub) ) {
     models.User.find({
       where: { id: req.jwt.sub },
       include: [ { model: models.Account, as: 'account' } ]
@@ -78,7 +77,7 @@ exports.validateUser = function(req,res,next) {
       delete u.account;
 
       req.user = u;
-      console.log(req.user);
+      
       next();
     });
   } else {

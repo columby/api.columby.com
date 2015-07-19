@@ -8,11 +8,27 @@
 var models = require('../models/index');
 
 
-/**
- *
- * Get list of Tags
- *
- */
+exports.createTag = function(tag, cb){
+  console.log('Finding or create tag.', tag);
+  models.Tag.findOne({
+    where: {
+      text: tag.text
+    }
+  }).then(function(result){
+    if (result) {
+      return cb(result,null);
+    } else {
+      models.Tag.create(tag).then(function(result){
+        console.log(result);
+        return cb(result);
+      });
+    }
+  }).catch(function(err){
+    return cb(null,err);
+  });
+}
+
+
 exports.index = function(req, res) {
   console.log('index tags', req.query);
   console.log(req.params);

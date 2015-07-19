@@ -5,42 +5,8 @@
  */
 var models = require('../models/index'),
     datasetPerms = require('../permissions/dataset.permission'),
-  config = require('../config/config'),
-  jwt = require('jwt-simple'),
-  moment = require('moment');
-
-
-
-exports.extractlink = function(req,res) {
-  console.log(req.params);
-  console.log(req.query);
-  var uri = req.query.uri;
-  console.log(uri);
-
-  // get link properties
-  if (uri){
-    req.head(uri, function(err, result, body){
-      if (res.statusCode !== 200) {
-        console.log('invalid url');
-      } else {
-        // check for file
-        console.log('valid url');
-        // check for arcgis
-
-      }
-
-
-      res.json({
-        headers: result,
-        body: body
-      });
-      console.log('content-type:', result.headers['content-type']);
-      console.log('content-length:', result.headers['content-length']);
-    });
-  } else {
-    res.json({err:'no uri'});
-  }
-};
+    tagCtrl = require('../controllers/tag.controller'),
+    config = require('../config/config');
 
 
 /**
@@ -132,22 +98,14 @@ exports.show = function(req, res) {
  */
 exports.create = function(req, res) {
 
-  var d = req.body;
-
-  // Handle tags
-  if (d.tags ) {
-    //d.tags = d.tags.split(',');
-  }
+  var data = req.body;
+  delete data.account;
+  console.log('Creating dataset: ', data);
 
   // Create a new dataset
-  models.Dataset.create(req.body).then(function(dataset) {
-    //console.log('Dataset created: ', dataset);
-    dataset.setAccount(req.body.account.id).then(function(dataset) {
-      console.log('Dataset account attached: ', dataset);
-      return res.json(dataset);
-    }).catch(function(err) {
-      handleError(res,err);
-    });
+  models.Dataset.create(data).then(function(dataset) {
+    console.log('[Controller Dataset] - Dataset created. ');
+    return res.json(dataset);
   }).catch(function(err){
     handleError(res,err);
   });
@@ -156,22 +114,15 @@ exports.create = function(req, res) {
 
 // Updates an existing dataset in the DB.
 exports.update = function(req, res) {
-
-  if(req.body._id) { delete req.body._id; }
-
-  models.Dataset.find(req.params.id).then(function(dataset){
-    if(!dataset) { return res.send(404); }
-
-    // Set new header image if needed
-    if (req.body.headerImg){
-      dataset.setHeaderImg(req.body.headerImg);
-    }
-
-    dataset.updateAttributes(req.body).then(function(dataset) {
-      return res.json(dataset);
-    }).catch(function(err) {
-      handleError(res,err);
-    });
+  models.Dataset.update(
+    req.body,
+    {
+      where: {
+        id: req.body.id
+      }
+    }).then(function(result){
+    console.log('Update success: ', result);
+    return res.json(req.body);
   }).catch(function(err){
     handleError(res,err);
   });
@@ -237,25 +188,26 @@ exports.destroy = function(req, res) {
  */
 exports.addTag = function(req,res) {
 
-  var tag = req.body.tag;
-  models.Tag.findOrCreate({
-    where: {
-      text: tag.text
+  console.log('Dataset add tag: ', req.body.tag);
+
+  tagCtrl.createTag(req.body.tag, function(tag,err){
+    if (err) {
+      console.log(err);
+      return handleError(res, err);
     }
-  }).spread(function(tag, created){
-    console.log('created: ', created);
-    console.log(created);
-    models.Dataset.find(req.params.id).then(function (dataset) {
-      dataset.addTag(tag.id).then(function (dataset) {
+    console.log('tag: ', tag);
+    console.log('id', req.params);
+    models.Dataset.findById(req.params.id).then(function (dataset) {
+      dataset.addTag(tag).then(function (dataset) {
+        console.log(dataset);
         return res.json({dataset: dataset});
       }).catch(function (err) {
+        console.log(err);
         return handleError(res, err);
       });
     }).catch(function (err) {
       return handleError(res, err);
     });
-  }).catch(function(err){
-    return handleError(res,err);
   });
 };
 
@@ -265,10 +217,13 @@ exports.addTag = function(req,res) {
 exports.removeTag = function(req,res){
   console.log(req.params);
   if (req.params.id && req.params.tid) {
-    models.Dataset.find(req.params.id).then(function (dataset) {
+    models.Dataset.findById(req.params.id).then(function (dataset) {
       if (dataset) {
         models.Tag.find({where: { id:req.params.tid}}).then(function(tag){
           dataset.removeTag(tag).then(function() {
+
+            // delete tags with no connections
+
             return res.json({status: 'success'});
           });
         }).catch(function(err){
@@ -353,68 +308,11 @@ exports.destroyDistribution = function(req, res) {
 };
 
 
-/*-------------- REFERENCES --------------------------------------------------------------*/
-exports.listReferences = function(req, res) {
-  console.log(req.params);
-  var id = req.params.id;
-  console.log(id);
-};
 
-exports.getReference = function(req,res){
-  console.log(req.params);
-};
-
-exports.createReference = function(req, res) {
-  var id = req.params.id;
-  var reference = req.body.reference;
-
-  // Find the dataset to attach the reference to
-  models.Dataset.find(id).then(function(dataset){
-    if (!dataset){ return handleError( res, { error:'Failed to load dataset' } ); }
-    // Create a db-entry for the reference
-    models.Reference.create(reference).then(function(reference){
-      // Add the reference to the dataset
-      dataset.addReference(reference).then(function(dataset){
-        res.json(dataset);
-      }).catch(function(err){
-        return handleError(res,err);
-      });
-    }).catch(function(err){
-      return handleError(res,err);
-    });
-  }).catch(function(err){
-    return handleError(res,err);
-  });
-};
-
-exports.updateReference = function(req, res) { };
-
-/**
- * Delete a source attached to a dataset
- **/
-exports.destroyReference = function(req, res) {
-
-  var rid = req.params.rid;
-  models.Reference.find(rid).then(function(reference){
-    console.log('reference', reference);
-    if(reference){
-      reference.destroy().then(function(){
-        console.log('deleted');
-        res.json({status:'success'});
-      }).catch(function(err){
-        handleError(res,err);
-      });
-    } else {
-      res.json(reference);
-    }
-  }).catch(function(err){
-    handleError(res,err);
-  });
-};
 
 
 
 function handleError(res, err) {
-  console.log('Dataset error,', err);
+  console.log('Dataset controller error,', err);
   return res.status(500).json({status:'error', msg:err});
 }

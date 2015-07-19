@@ -10,62 +10,6 @@ var models = require('../models/index');
 
 /**
  *
- * Functions
- *
- */
-
-// Get the primary account for a user.
-function getPrimaryAccount(user, cb){
-  console.log('Getting primary for user ' + user.id);
-  models.User.find({
-    where: {
-      id: user.id
-    },
-    include: [{
-      model: models.Account,
-      as:'account',
-      where: {
-        primary: 'true'
-      },
-      include: [{
-        model: models.File,
-        as:'avatar'
-      }]
-    }]
-  }).then(function(user){
-    //console.log('user', user.account[0].dataValues);
-    var a = user.account[ 0].dataValues;
-    a.role = a.AccountsUsers.role;
-    delete a.AccountsUsers;
-    cb(a);
-  }).catch(function(err){
-    console.log('err',err);
-
-  });
-}
-// Get the primary account for a list of users.
-function getPrimaryAccounts(users, counter, result, cb){
-  console.log('Getting primary account counter: ' + counter);
-  console.log('The number of users is: ' + users.length);
-  getPrimaryAccount(users[ counter], function(primary){
-    console.log('primary id', primary.id);
-    result.push(primary);
-    handleGetPrimaryAccounts(users,counter,result,cb);
-  });
-}
-// Handle the primary account result.
-function handleGetPrimaryAccounts(users,counter,result,cb){
-  counter++;
-  if (counter<users.length){
-    getPrimaryAccounts(users,counter,result,cb);
-  } else {
-    cb(result);
-  }
-}
-
-
-/**
- *
  * Get list of accounts
  *
  */
@@ -97,9 +41,6 @@ exports.index = function(req, res) {
  *
  * Get a single account
  *
- * @param req
- * @param res
- *
  */
 exports.show = function(req, res) {
   console.log('Show account with slug: ' + req.params.slug);
@@ -116,44 +57,64 @@ exports.show = function(req, res) {
         { model: models.Account, as: 'account', where: { primary: true }, include: [
           { model: models.File, as: 'avatar' },
         ] }
-      ]
-      }
+      ]}
     ]
   }).then(function(account) {
-    console.log(account);
-    var a = {
-      id: account.dataValues.id,
-      shortid: account.dataValues.shortId,
-      displayName: account.dataValues.displayName,
-      slug: account.dataValues.slug,
-      email: account.dataValues.email,
-      description: account.dataValues.description,
-      primary: account.dataValues.primary,
-      contact: account.dataValues.contact,
-      url: account.dataValues.url,
-      location: account.dataValues.location,
+    // console.log(account);
+    account.getRegistries().then(function(registries){
 
-      avatar: account.avatar,
-      headerImg: account.headerImg,
-      files: account.files,
-      people: []
-    }
+      // restructure registries
+      var r=[];
+      for (var i=0; i<registries.length; i++){
+        var rr = registries[ i].dataValues;
+        rr.settings = rr.account_registries;
+        delete rr.account_registries;
+        r.push(rr);
+      }
 
-    for (var i=0; i<account.users.length;i++){
-      var u = account.users[ i].dataValues.account[0].dataValues;
-      u.role = account.users[ i].UserAccounts.dataValues.role;
-      delete u.UserAccounts;
-      delete u.plan;
-      delete u.uuid;
-      a.people.push(u);
-    }
+      var a = {
+        id: account.dataValues.id,
+        shortid: account.dataValues.shortId,
+        displayName: account.dataValues.displayName,
+        slug: account.dataValues.slug,
+        email: account.dataValues.email,
+        description: account.dataValues.description,
+        primary: account.dataValues.primary,
+        contact: account.dataValues.contact,
+        url: account.dataValues.url,
+        location: account.dataValues.location,
 
-    //console.log(a);
+        avatar: account.avatar,
+        headerImg: account.headerImg,
+        files: account.files,
+        people: []
+      }
 
-    return res.json({
-      status: 'success',
-      account: a
+      for (var i=0; i<account.users.length;i++){
+        var u = account.users[ i].dataValues.account[0].dataValues;
+        u.role = account.users[ i].UserAccounts.dataValues.role;
+        delete u.UserAccounts;
+        delete u.plan;
+        delete u.uuid;
+        a.people.push(u);
+      }
+
+      //console.log(a);
+
+      a.registries = r;
+
+      return res.json({
+        status: 'success',
+        account: a
+      });
+
+
+
+
+
     });
+
+
   }).catch(function(err){
     return handleError(res,err);
   });

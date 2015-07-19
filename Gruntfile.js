@@ -92,6 +92,14 @@ module.exports = function (grunt) {
   ]);
 
 
+  grunt.registerTask('serve:development', [
+    'env:development',
+    'express:development',
+    'wait',
+    'open',
+    'express-keepalive'
+  ]);
+
   grunt.registerTask('serve:production', [
     'build',
     'env:production',
