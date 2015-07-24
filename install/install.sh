@@ -7,11 +7,12 @@ echo " --------------------------"
 apt-get update
 
 # NODEJS
-npm install -g nodejs npm nodejs-legacy forever grunt-cli
+apt-get install nodejs npm nodejs-legacy
+npm install -g forever grunt-cli
 
 # NGINX
 apt-get install -y nginx
-cp ./nginx/api.columby.com.conf /etc/nginx/conf.d/api.columby.com.conf
+cp ./nginx/api.columby.com.conf /etc/nginx/site-available/api.columby.com.conf
 mkdir -p /var/log/columby
 mkdir -p /var/log/columby/api
 chown columby:columby /var/log/columby -R

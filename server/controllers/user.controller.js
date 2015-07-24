@@ -324,7 +324,7 @@ exports.delete = function(req, res) {
     } else {
       // create a new logintoken
       models.Token.create({user_id: user.id}).then(function(token){
-        console.log('token created', token.token);
+        console.log('[User controller] - token created: ' + token.token);
         // Send the new token by email
         var vars = {
           tokenurl: 'https://www.columby.com/u/verify?token=' + token.token,
@@ -334,8 +334,8 @@ exports.delete = function(req, res) {
           }
         };
         emailService.login(vars, function(result){
-          console.log(result);
-          console.log(user.shortid);
+          console.log('[User controller] - Emailservice result: ', result);
+          console.log('[User controller] - User short id: ' + user.shortid);
           if (result[0].status === 'sent') {
             return res.json({status: 'success', user: user.shortid});
           } else {
@@ -343,7 +343,7 @@ exports.delete = function(req, res) {
           }
         });
       }).catch(function(err){
-        console.log('err', err);
+        console.log('[User controller] - Error creating token: ', err);
         return handleError(res,err);
       });
     }

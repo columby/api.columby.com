@@ -19,12 +19,18 @@ module.exports = function(app){
   );
 
   router.post('/',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
     auth.ensureAuthenticated,
     distributionPerms.canCreate,
     distributionCtrl.create
   );
 
   router.post('/validate-link',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
     auth.ensureAuthenticated,
     distributionCtrl.validateLink);
 
@@ -32,11 +38,17 @@ module.exports = function(app){
     distributionCtrl.show);
 
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
     auth.ensureAuthenticated,
     distributionPerms.canEdit,
     distributionCtrl.update);
 
   router.delete('/:id',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
     auth.ensureAuthenticated,
     distributionPerms.canDelete,
     distributionCtrl.destroy);
