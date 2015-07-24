@@ -7,7 +7,8 @@
  */
 var models = require('../models/index');
 
-
+var console = process.console;
+console.log('account controller');
 /**
  *
  * Get list of accounts

@@ -41,5 +41,7 @@ module.exports = {
 
   embedly: {
     key : process.env.EMBEDLY_KEY
-  }
+  },
+
+  scribeUser: process.env.SCRIBE_USER || 'test:test'
 };
