@@ -10,9 +10,18 @@ var models = require('../models/index'),
 
 
 /**
+ * @api {get} /dataset Request a list of datasets
+ * @apiName GetDatasets
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
  *
- * Get list of datasets.
+ * @apiSuccess {Object} Array with dataset objects.
  *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *       "title": "Dataset title"
+ *    }]
  */
 exports.index = function(req, res) {
   console.log('Fetching datasets');

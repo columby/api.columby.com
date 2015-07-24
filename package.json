@@ -4,7 +4,8 @@
   "main": "server/server.js",
   "apidoc": {
     "title": "Columby API documentation",
-    "url": "/docs"
+    "url": "https://api.columby.com/",
+    "version": "2.0.0"
   },
   "dependencies": {
     "apidoc": "^0.13.1",
