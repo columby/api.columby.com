@@ -1,12 +1,13 @@
 {
   "name": "columby-api",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "main": "server/server.js",
   "apidoc": {
     "title": "Columby API documentation",
     "url": "/docs"
   },
   "dependencies": {
+    "apidoc": "^0.13.1",
     "aws-sdk": "2.1.36",
     "basic-auth": "1.0.3",
     "body-parser": "1.13.1",

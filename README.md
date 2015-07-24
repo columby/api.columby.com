@@ -8,10 +8,10 @@ The Columby API is built with the following great (open source) technology:
   * [Digital Ocean Server](http://digitalocean.com)
   * [Ubuntu 14.0.4 LTS](http://releases.ubuntu.com/14.04/)
   * [NodeJS](http://nodejs.org)
-  * [GruntJS](http://gruntjs.com)
+  * [Gulp](http://gulpjs.com/)
   * [Express](http://expressjs.com) - Web server
   * [Sequelize](http://sequelizejs.com) - Database communication
-  * [Node JWT simple](https://github.com/hokaccha/node-jwt-simple) - User authentication
+  * [Node JWT](https://github.com/hokaccha/node-jwt-simple) - User authentication
   * [Postgresql with postGIS](http://postgis.net) - Main database with excellent geo-support
   * [Forever](https://github.com/foreverjs/forever) - A simple CLI tool for ensuring that a given script runs continuously (i.e. forever)  
   * [NGINX](http://nginx.org)
@@ -23,16 +23,22 @@ The Columby API is built with the following great (open source) technology:
 Development - Staging - Production  
 All development and pull-requests are handled in the development branch.  
 [Wercker](http://www.wercker.com) is used to build and deploy automatically when new code is pushed to a branch.
+
 ### Development
-To run the API locally, use [Foreman](https://github.com/ddollar/foreman) (provided with the [Heroku Toolbelt](https://toolbelt.heroku.com/)) to start the process. A .env file is required with the proper environment variables.
+To run the API locally, use gulp to start the process. A configuration file at /server/config/env.js is required with the proper environment variables.
+
+    gulp
+
 ### Staging / Production
 Create a production version with Grunt:
 
-    grunt build (for production version, using production database)
-    grunt build:staging (for development/staging version, using staging database)
-Serve the ./dist/server folder using foreman, or the columby-api upstart process.
+    gulp version
+    gulp apidoc
+    gulp build
 
-    start columby-api
+Serve ./dist/server/server.js using gulp, or the columby-api upstart process.
+
+    sudo service columby-api start
 
 
 ## Installation

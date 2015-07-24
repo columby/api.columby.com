@@ -1,6 +1,8 @@
 'use strict';
 
-var fs = require('fs');
+var fs = require('fs'),
+path=require('path');
+
 
 module.exports = function(app) {
 
@@ -15,4 +17,3 @@ module.exports = function(app) {
       return res.json({status: 'not found'});
     });
 };
-
