@@ -31,7 +31,7 @@ module.exports = function(app) {
   );
 
 
-  router.post('/addFile',
+  router.post('/:id/addFile',
     auth.validateJWT,
     auth.validateUser,
     auth.ensureAuthenticated,
@@ -47,6 +47,13 @@ module.exports = function(app) {
     controller.update
   );
 
+  router.put('/:id/registry/:rid',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    permission.canEdit,
+    controller.updateRegistry
+  );
 
   app.use('/v2/account', router);
 };

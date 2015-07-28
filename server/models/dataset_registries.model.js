@@ -9,6 +9,12 @@ module.exports = function(sequelize, DataTypes) {
    */
   var dataset_registries = sequelize.define('dataset_registries', {
 
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+
     sync: {
       type: DataTypes.BOOLEAN
     },

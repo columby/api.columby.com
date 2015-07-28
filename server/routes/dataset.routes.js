@@ -38,6 +38,15 @@ module.exports = function(app){
     datasetCtrl.destroy);
 
 
+  // Dataset registry routes
+  router.put('/:id/registry/:rid',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    datasetPerms.canEdit,
+    datasetCtrl.updateRegistry
+  );
+
   // Dataset tags routes
   router.post('/:id/tag',
     auth.validateJWT,

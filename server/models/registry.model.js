@@ -28,11 +28,6 @@ module.exports = function(sequelize, DataTypes) {
         allowNull: false
       },
 
-      active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
-
       icon: {
         type: DataTypes.STRING
       },
@@ -43,21 +38,21 @@ module.exports = function(sequelize, DataTypes) {
           // Registry can belong to many datasets (many to many)
           Registry.belongsToMany(models.Dataset,{
             through: 'dataset_registries',
-            as:'Registries'
+            as:'registries'
           });
           models.Dataset.belongsToMany(Registry,{
             through: 'dataset_registries',
-            as:'Registries'
+            as:'registries'
           });
 
           // Registry can belong to many datasets (many to many)
           Registry.belongsToMany(models.Account, {
             through: 'account_registries',
-            as:'Registries'
+            as:'registries'
           });
           models.Account.belongsToMany(Registry,{
             through: 'account_registries',
-            as:'Registries'
+            as:'registries'
           });
         }
       }

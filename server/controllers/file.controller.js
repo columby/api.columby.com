@@ -5,84 +5,26 @@
  *  Module dependencies
  *
  */
-var _ = require('lodash'),
-    models = require('../models/index'),
+var models = require('../models/index'),
     crypto    = require('crypto'),
     config = require('../config/config'),
-    AWS = require('aws-sdk'),
+    moment = require('moment'),
     fs = require('fs'),
+    knox = require('knox'),
     gm = require('gm').subClass({ imageMagick: true }),
-    request = require('request');
+    path = require('path');
 
 
-var s3 = new AWS.S3();
-
-
-/** ------ FUNCTIONS ------------------------------------------------------- **/
-
-function getExpiryTime() {
-  var _date = new Date();
-  return '' + (_date.getFullYear()) + '-' + (_date.getMonth() + 1) + '-' +
-    (_date.getDate() + 1) + 'T' + (_date.getHours() + 3) + ':' + '00:00.000Z';
-}
-
-function createS3Policy(file) {
-  console.log('Creating policy file. ', file);
-
-  if (!file.account_id){
-    console.log('No account id found. ');
-    return null;
-  }
-
-  var fileKey;
-  if (file.type === 'datafile'){
-    fileKey = 'accounts/' + file.account_id + '/datafiles/' + file.filename;
-  } else if (file.type === 'image') {
-    fileKey = 'accounts/' + file.account_id + '/images/' + file.filename;
-  } else {
-    fileKey = 'accounts/' + file.account_id + '/files/' + file.filename;
-  }
-
-  var s3Policy = {
-    'expiration': getExpiryTime(),
-    'conditions': [
-      ['eq', '$key', fileKey ],
-      {'bucket': config.aws.bucket},
-      {'acl': 'public-read'},
-      ['starts-with', '$Content-Type', file.filetype],
-      {'success_action_status' : '201'},
-      ['content-length-range', 0, file.size]
-    ]
-  };
-  console.log('policy', s3Policy);
-  // stringify and encode the policy
-  var stringPolicy = JSON.stringify(s3Policy);
-  var base64Policy = new Buffer(stringPolicy, 'utf-8').toString('base64');
-
-  // sign the base64 encoded policy
-  var signature = crypto.createHmac('sha1', config.aws.secretKey)
-                      .update(new Buffer(base64Policy, 'utf-8')).digest('base64');
-
-  // build the results object
-  return {
-    policy: base64Policy,
-    signature: signature,
-    s3Key: config.aws.publicKey,
-    bucket: config.aws.bucket,
-    file: {
-      key: fileKey,
-      acl: 'public-read',
-      filetype: file.filetype
-    }
-  };
-}
+var s3client = knox.createClient({
+  key: config.aws.key,
+  secret: config.aws.secret,
+  bucket: config.aws.bucket
+});
 
 /**
  *
  * Fetch a file from s3 and store it locally in a tmp folder.
  *
- * @param uri
- * @param callback
  */
 function getImage(file, callback) {
   var localFile = fs.createWriteStream(config.root + '/server/tmp/' + file.id);
@@ -178,21 +120,44 @@ function createDerivative(file, callback) {
 }
 
 
-
-/* ------ ROUTES ---------------------------------------------------------- */
-
-// Get list of files
+/**
+ * @api {get} /file/ Request a list of files
+ * @apiName Getfiles
+ * @apiGroup File
+ * @apiVersion 2.0.0
+ *
+ * @apiSuccess {Object} dataset object.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    {
+ *       "title": "Dataset title"
+ *    }
+ */
 exports.index = function(req, res) {
-  models.File
-    .find()
-    .sort('-createdAt')
-    .populate('owner', 'username')
-    .exec(function(err,files){
-      if(err) { return handleError(res, err); }
-      if(!files) { return res.send(404); }
-      return res.json(files);
-    });
+  console.log(req.query);
+  var limit = req.query.limit || 20;
+  var order = req.query.order || 'created_at DESC';
+
+  var filter = {
+    account_id: req.query.account_id,
+    status: true
+  }
+  if (req.query.type) {
+    filter.type = req.query.type
+  }
+
+  models.File.findAll({
+    where: filter,
+    limit: limit,
+    order: order
+  }).then(function(files){
+    return res.json(files);
+  }).catch(function(error){
+    return handleError(res,error)
+  });
 };
+
 
 // Get a single file
 exports.show = function(req, res) {
@@ -341,75 +306,73 @@ exports.destroy = function(req, res) {
  *
  ***/
 exports.sign = function(req,res) {
+  var request = req.body;
+  request.meta = request.meta || {};
 
-  // Signing a request involves 3 steps:
-  //   1. Create a unique, slugified filename
-  //   2. Create a File record in the database
-  //   3. Create a policy for upload
+  var uploadType = request.type;
+  var fileName = request.filename;
+  var fileSize = request.filesize;
+  var fileType = request.filetype;
+  var account_id = request.account_id;
+
+  var path = '/files/' + uploadType + '/' + fileName;
 
   // Handle the supplied query parameters
   var file = {
-    type: req.query.type,
-    filetype: req.query.filetype,
-    size: req.query.filesize,
-    filename: req.query.filename,
-    account_id: req.query.accountId
+    type: uploadType,
+    path: path,
+    filename: fileName,
+    status: false,
+    filetype: fileType,
+    size: fileSize,
+    account_id: account_id
   };
-  console.log('Processing file: ', file);
-
-  // Check file type validity
-  var validFileType = false;
-  var validFileSize = false;
-  var maxSize = 0;
-  switch (req.query.type) {
-    case 'image':
-      var validTypes = ['image/png', 'image/jpg', 'image/jpeg'];
-      if (validTypes.indexOf(file.filetype) !== -1) {
-        validFileType = true;
-      }
-      maxSize = 10000000; //10 mb
-      break;
-    case 'datafile':
-      validTypes = ['text/csv'];
-      if (validTypes.indexOf(file.filetype) !== -1) {
-        validFileType = true;
-      }
-      break;
-    default:
-      validFileType = true;
-      break;
-  }
-
-  if (!validFileType) {
-    return res.json({status: 'error', err: 'File type ' + file.filetype + ' is not allowed. '});
-  }
-  // TODO: check account file size
-  if (!validFileSize) {
-    //return res.json({status: 'error', err: 'File size ' + file.filesize + ' is too big. ' + maxSize + ' allowed. '});
-  }
 
   // Create a File record in the database
-  models.File.create(file).then(function (file) {
-    console.log('File created: ', file.dataValues);
-    // Add the owner of the file (publication account)
-    file.setAccount(req.query.accountId).then(function (owner) {
-      console.log('owner, ', owner.dataValues);
-      var credentials = createS3Policy(file.dataValues);
-      console.log('credentials', credentials);
-      if (!credentials) {
-        return handleError(res, 'Error creating policy file.');
-      } else {
-        // Send back the policy
-        return res.json({
-          file: file,
-          credentials: credentials
-        });
+  models.File.create(file).then(function(file) {
+    //console.log('File created: ', file.dataValues);
+    // update path with new filename
+    path = '/files/' + uploadType + '/' + file.filename;
+
+    var expiration = moment().add(15, 'm').toDate(); //15 minutes
+    var readType = 'private';
+
+    var s3Policy = {
+      'expiration': expiration,
+      'conditions': [{ 'bucket': config.aws.bucket },
+      ['starts-with', '$key', config.environment + path],
+      { 'acl': readType },
+      { 'success_action_status': '201' },
+      ['starts-with', '$Content-Type', request.filetype],
+      ['content-length-range', 2048, request.filesize], //min and max
+    ]};
+
+    var stringPolicy = JSON.stringify(s3Policy);
+    var base64Policy = new Buffer(stringPolicy, 'utf-8').toString('base64');
+
+    // sign policy
+    var signature = crypto.createHmac('sha1', config.aws.secret)
+        .update(new Buffer(base64Policy, 'utf-8')).digest('base64');
+
+    var credentials = {
+      url: config.aws.endpoint,
+      fields: {
+        key: config.environment + path,
+        AWSAccessKeyId: config.aws.key,
+        acl: readType,
+        policy: base64Policy,
+        signature: signature,
+        'Content-Type': request.filetype,
+        success_action_status: 201
       }
-    }).catch(function (err) {
-      // delete the file again
-      return handleError(res, err);
-    });
+    };
+
+    console.log('credentials', credentials);
+
+    return res.json({file:file, credentials:credentials});
+
   }).catch(function (error) {
+    console.log(error);
     return handleError(res, error);
   });
 };
@@ -420,24 +383,24 @@ exports.sign = function(req,res) {
  * Update the status of a file from draft to published
  *
  */
-exports.handleS3Success = function(req,res) {
-  models.File.find(req.body.fileId).then(function (file) {
-    file.updateAttributes({
-      status: true,
-      url: req.body.url
-    }).then(function(file){
-      //console.log(file.dataValues);
-      return res.json(file);
-    }).catch(function(err){
-      handleError(res,err);
-    });
+exports.finishUpload = function(req,res) {
+  models.File.update({
+    status: true
+  }, {
+    where: {
+      id: req.body.id
+    }
+  }).then(function(result) {
+    return res.json(result);
   }).catch(function (err) {
-    handleError(res, err);
+    return handleError(res, err);
   });
 };
 
 
+
+
 function handleError(res, err) {
   console.log('Error: ', err);
-  return res.send(500, err);
+  return res.json({status: 'error', msg: err});
 }

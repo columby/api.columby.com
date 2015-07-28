@@ -58,10 +58,20 @@ exports.index = function(req, res) {
   });
 };
 
+
 /**
+ * @api {get} /dataset/:slug Request a datasets
+ * @apiName GetDataset
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
  *
- * Show a single dataset.
+ * @apiSuccess {Object} dataset object.
  *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    {
+ *       "title": "Dataset title"
+ *    }
  */
 exports.show = function(req, res) {
   // Show only if status is public and user can edit the dataset.
@@ -81,18 +91,11 @@ exports.show = function(req, res) {
       { model: models.Reference, as: 'references' }
     ]
   }).then(function(dataset) {
-    // return if result is empty
-    if (!dataset){
+    if (!dataset) { return res.json(dataset); }
+    dataset.getRegistries().then(function(result){
+      dataset.dataValues.registries = result;
+      req.dataset = dataset;
       return res.json(dataset);
-    }
-    req.dataset = dataset;
-    // Check access
-    datasetPerms.canViewDataset(req, function(access){
-      if (access === true) {
-        return res.json(dataset);
-      } else {
-        return res.status(401).json({status: 'Error', msg: 'No access'});
-      }
     });
   }).catch(function(err){
     return handleError(res, err);
@@ -316,8 +319,52 @@ exports.destroyDistribution = function(req, res) {
   });
 };
 
+/**
+ * @api {get} /dataset/:id/registry/:rid Update dataset registry status
+ * @apiName UpdateDatasetRegistry
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
+ *
+ * @apiSuccess {Object} Array with dataset_registry object.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *       "title": "Dataset title"
+ *    }]
+ */
+exports.updateRegistry = function(req,res){
+  console.log('update dataset registry');
 
-
+  // get registries for this dataset
+  models.dataset_registries.find({
+    where: {
+      dataset_id: req.params.id,
+      registry_id: req.params.rid
+    }
+  }).then(function(registry){
+    if (!registry){
+      models.dataset_registries.create({
+        dataset_id: req.params.id,
+        registry_id: req.params.rid,
+        status: req.body.status
+      }).then(function(result){
+        console.log(result.dataValues);
+        return res.json(result);
+      }).catch(function(err){
+        handleError(res,err);
+      })
+    } else {
+      registry.updateAttributes({
+        status: req.body.status
+      }).then(function(result){
+        return res.json(result);
+      }).catch(function(err){
+        handleerror(res,err);
+      });
+    }
+  });
+}
 
 
 

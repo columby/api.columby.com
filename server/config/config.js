@@ -6,7 +6,7 @@ module.exports = {
 
   root: path.normalize(__dirname + '/../..'),
 
-  env: process.env.NODE_ENV || 'development',
+  environment: process.env.NODE_ENV || 'development',
 
   port: process.env.NODE_API_PORT || 8000,
 
@@ -33,8 +33,8 @@ module.exports = {
   },
 
   aws: {
-    publicKey : process.env.AWS_ACCESS_KEY_ID,
-    secretKey : process.env.AWS_SECRET_ACCESS_KEY,
+    key : process.env.AWS_ACCESS_KEY_ID,
+    secret : process.env.AWS_SECRET_ACCESS_KEY,
     bucket    : process.env.S3_BUCKET_NAME,
     endpoint  : process.env.AWS_S3_ENDPOINT
   },

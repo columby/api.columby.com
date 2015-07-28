@@ -19,7 +19,7 @@ var scribe = require('scribe-js')();
 var console = process.console;
 
 module.exports = function(app) {
-  var env = app.get('env');
+  var env = config.environment;
 
   app.use(compression());
   app.use(bodyParser.urlencoded({ extended: false }));
@@ -33,7 +33,7 @@ module.exports = function(app) {
       realm: "ScribeJS WebPanel",
       file: __dirname + '/scribe.htpasswd'
   });
-  
+
   app.use(scribe.express.logger()); //Log each request
   app.use('/logs', auth.connect(basicAuth), scribe.webPanel());
   console.log('Logger started. ');

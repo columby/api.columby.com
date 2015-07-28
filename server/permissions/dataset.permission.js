@@ -110,19 +110,9 @@ exports.canCreate = function(req,res,next) {
 
   console.log('validating dataset.canCreate');
 
-  if (!req.jwt || !req.jwt.sub) {
-    return res.status(401).json({status: 'Error', msg: 'No access token provided'});
-  }
-
-  if (!req.user || !req.user.id) {
-    return res.status(401).json({status: 'Error', msg: 'No user found'});
-  }
-
-  // An admin can edit everything
-  if (req.user.admin) {
-    console.log('User is admin');
-    return next();
-  }
+  if (!req.jwt || !req.jwt.sub) { return res.status(401).json({status: 'Error', msg: 'No access token provided'}); }
+  if (!req.user || !req.user.id) { return res.status(401).json({status: 'Error', msg: 'No user found'}); }
+  if (req.user.admin) { return next(); }
 
   // Iterate over user's accounts
   for (var i=0; i<user.account.length; i++){
@@ -155,6 +145,7 @@ exports.canEdit = function(req,res,next){
   models.Dataset.findById(req.params.id, {
     include: [ { model: models.Account, as: 'account' }]
   }).then(function(dataset){
+    req.dataset = dataset;
     if (req.user.primary.id === dataset.dataValues.account_id) {
       console.log('dataset_account is users primary');
       return next();
@@ -165,9 +156,9 @@ exports.canEdit = function(req,res,next){
       if (req.user.organisations[ i].id === dataset.dataValues.account_id) {
         console.log('Account found for user, checking role');
         // Check if account has the right role to edit.
-        var role = req.user.account[ i].AccountsUsers.role;
+        var role = req.user.organisations[ i].role;
         // User account with role owner, admin can edit an account. (Not editor or viewer)
-        if (role === 1 || 2 || 3) {
+        if ( (role === 1) || (role === 2) || (role === 3) ) {
           console.log('Valid role! ' + role);
           return next();
         }

@@ -9,48 +9,31 @@ var models = require('../models/index');
  */
 exports.canCreate = function(req, res, next) {
   console.log('Check if user can create this account.');
-  // Check if a jwt is present
-  if (req.jwt && req.jwt.sub){
-    // Check if the user in the jwt exists
-    models.User.find({
-      where: {
-        id: req.jwt.sub
-      },
-      include: [
-        { model: models.Account, as: 'account' }
-      ]
-    }).then(function(user){
 
-      // An admin can edit everything
-      if (user.admin) {
-        console.log('User is admin, valid!');
+  if (!req.jwt) { return res.json({status: 'error', msg: 'No jwt found.'}); }
+  if (!req.user) { return res.json({status: 'error', msg: 'No user found.'}); }
+  if (!req.params.id) { return res.json({status: 'error', msg: 'No account id parameter found.'}); }
+
+  // An admin can edit everything
+  if (user.admin) {
+    console.log('User is admin, valid!');
+    return next();
+  }
+
+  // Iterate over user's accounts
+  for (var i=0; i<req.user.organisations.length; i++){
+    // Check if account is same as requested account
+    if (parseInt(req.user.organisations[ i].id) === parseInt(req.params.id)) {
+      // Check if account has the right role to edit.
+      var role = req.user.organisations[ i].role;
+      // User account with role owner or admin can edit an account. (not editor or viewer)
+      if ( (role === 1) || (role === 2) ) {
         return next();
       }
-
-      // Iterate over user's accounts
-      for (var i=0; i<user.account.length; i++){
-        // Check if account is same as requested account
-        if (user.account[ i].dataValues.id === req.body.id) {
-          console.log('Account found for user, checking role');
-          // Check if account has the right role to edit.
-          var role = user.account[ i].AccountsUsers.role;
-          // User account with role owner or admin can edit an account. (not editor or viewer)
-          if ((role === 1 || 2 )) {
-            console.log('Valid role! ' + role);
-            return next();
-          }
-        }
-      }
-
-      // All failed, no access :(
-      return res.json({ status:'err', msg:'No access.' });
-
-    }).catch(function(err){
-      return handleError(res,err);
-    });
-  } else {
-    return res.json({status:'err', msg:'User not logged in'});
+    }
   }
+  // All failed, no access :(
+  return res.json({ status:'err', msg:'No access.' });
 };
 
 /**
@@ -59,47 +42,34 @@ exports.canCreate = function(req, res, next) {
  */
 exports.canEdit = function(req, res, next) {
   console.log('Check if user can edit this account.');
-  // Check if a jwt is present
-  if (req.jwt && req.jwt.sub){
-    // Check if the user in the jwt exists
-    models.User.find({
-      where: {
-        id: req.jwt.sub
-      },
-      include: [
-        { model: models.Account, as: 'account' }
-      ]
-    }).then(function(user){
+  console.log(req.params);
 
-      // An admin can edit everything
-      if (user.admin) {
-        console.log('User is admin, valid!');
+  if (!req.jwt) { return res.json({status: 'error', msg: 'No jwt found.'}); }
+  if (!req.user) { return res.json({status: 'error', msg: 'No user found.'}); }
+  if (!req.params.id) { return res.json({status: 'error', msg: 'No account id parameter found.'}); }
+  // An admin can edit everything
+  if (req.user.admin) {
+    console.log('User is admin, valid!');
+    return next();
+  }
+
+  // Iterate over user's accounts
+  for (var i=0; i<req.user.organisations.length; i++){
+    // Check if account is same as requested account
+    if (parseInt(req.user.organisations[ i].id) === parseInt(req.params.id)) {
+      console.log('Account found for user, checking role' );
+      // Check if account has the right role to edit.
+      console.log(req.user.organisations[ i]);
+      var role = req.user.organisations[ i].role;
+      // User account with role owner or admin can edit an account. (not editor or viewer)
+      if ( (role === 1) || (role === 2) ) {
+        console.log('Valid role! ' + role);
         return next();
       }
-
-      // Iterate over user's accounts
-      for (var i=0; i<user.account.length; i++){
-        // Check if account is same as requested account
-        if (user.account[ i].dataValues.id === req.body.id) {
-          console.log('Account found for user, checking role');
-          // Check if account has the right role to edit.
-          var role = user.account[ i].UserAccounts.role;
-          // User account with role owner or admin can edit an account. (not editor or viewer)
-          if ((role === 1 || 2 )) {
-            console.log('Valid role! ' + role);
-            return next();
-          }
-        }
-      }
-
-      // All failed, no access :(
-      return res.json({ status:'err', msg:'No access.' });
-
-    }).catch(function(err){
-      console.log(err);
-      return res.json({ status:'err', msg:err });
-    });
-  } else {
-    return res.json({status:'err', msg:'User not logged in'});
+    }
   }
+
+  // All failed, no access :(
+  console.log('No access');
+  return res.json({ status:'err', msg:'No access.' });
 };

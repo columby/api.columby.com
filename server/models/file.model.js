@@ -29,14 +29,9 @@ module.exports = function(sequelize, DataTypes) {
    */
   var File = sequelize.define('File', {
 
-      shortid: {
-        type: DataTypes.STRING,
-        unique: true
-      },
-
       type: {
-        type: DataTypes.ENUM,
-        values: [ 'image', 'datafile', 'file' ]
+        type: DataTypes.STRING,
+        allowNull: false
       },
       filename: {
         type: DataTypes.STRING,
@@ -60,18 +55,13 @@ module.exports = function(sequelize, DataTypes) {
         defaultValue: false
       },
       size: {
-        type: DataTypes.INTEGER
-      },
-      created_at:{
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
+        type: DataTypes.INTEGER,
         allowNull: false
       }
     }, {
       classMethods: {
         // Create associations to other models
         associate: function (models) {
-
 
           // Avatar association
           File.hasOne(models.Account, {
@@ -110,18 +100,16 @@ module.exports = function(sequelize, DataTypes) {
   File.afterCreate(function(model,fn) {
 
     // update filename and shortid
-
     var filename = model.filename;
     var id = model.id;
     var ext = path.extname(filename);
     var basename = path.basename(filename, ext);
-    model.updateAttributes({
-      filename: basename + '-' + id + ext,
-      shortid: hashids.encode(parseInt(String(Date.now()) + String(model.id)))
-    }).success(function () {
-
-    }).error(function () {
-
+    model.update({
+      filename: basename + '-' + id + ext
+    }).then(function (success) {
+      //console.log('update success');
+    }).catch(function (err) {
+      //console.log('rrr', err);
     });
   });
 

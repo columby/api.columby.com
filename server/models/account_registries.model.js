@@ -9,16 +9,32 @@ module.exports = function(sequelize, DataTypes) {
    */
   var account_registries = sequelize.define('account_registries', {
 
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+
     apikey: {
       type: DataTypes.STRING
     },
 
-    autosync: {
-      type: DataTypes.STRING
+    valid: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'Registry is validated'
     },
 
-    status: {
-      type: DataTypes.STRING
+    active: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      comment: 'Registry is active. Can be set by account editor'
+    },
+
+    autoadd: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
+      comment: 'Automatically add new datasets to the registrty'
     },
 
     statusMessage: {

@@ -3,23 +3,34 @@
 var express = require('express'),
     controller = require('./../controllers/file.controller'),
     auth = require('./../controllers/auth.controller'),
+    perm = require('./../permissions/file.permission'),
     router = express.Router();
 
 
 module.exports = function(app) {
 
-  router.get('/sign',
+  router.post('/sign',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.sign);
+    controller.sign
+  );
 
-  router.post('/s3success',
+  router.post('/finish-upload',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.handleS3Success);
+    controller.finishUpload
+  );
 
   //router.get('/createDerivative',
   //  controller.createDerivative);
 
   router.get('/',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    perm.canUpload,
     controller.index);
 
   router.get('/:id',
@@ -30,7 +41,7 @@ module.exports = function(app) {
     // check upload limit
     // validate upload space
     // upload using multer middleware
-    
+
     // finishUpload
       controller.create);
 

@@ -19,6 +19,7 @@ var config = require('../config/config'),
 /**
  *
  * Check if a user's jwt token is present
+ * Validate the token if present
  * And add the contents to req.
  *
  */
@@ -26,18 +27,21 @@ exports.validateJWT = function(req,res,next){
   console.log('Validating JWT.');
 
   req.jwt = req.jwt || {};
-
   // Decode the token if present
   if (req.headers.authorization){
     var token = req.headers.authorization.split(' ')[1];
-    var payload = jwt.decode(token, config.jwt.secret);
-    // Check token expiration date
-    if (payload.exp <= moment().unix()) {
-      return res.json({status: 'error', message: 'Token has expired'});
+    var payload = {
+      exp:null,
+      sub:null
+    };
+    try {
+      payload = jwt.decode(token, config.jwt.secret);
+    } catch (err){
+
     }
-    // Attach user id to req
-    if (!payload.sub) {
-      return res.json({status: 'error', message: 'No user idfound from token'});
+    // Check token expiration date
+    if ( (payload.exp) && (payload.exp <= moment().unix()) ) {
+      return res.json({status: 'error', message: 'Token has expired'});
     }
     req.jwt = payload;
   }
@@ -77,7 +81,7 @@ exports.validateUser = function(req,res,next) {
       delete u.account;
 
       req.user = u;
-      
+
       next();
     });
   } else {

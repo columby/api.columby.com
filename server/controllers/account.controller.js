@@ -7,8 +7,6 @@
  */
 var models = require('../models/index');
 
-var console = process.console;
-console.log('account controller');
 /**
  *
  * Get list of accounts
@@ -39,9 +37,23 @@ exports.index = function(req, res) {
 
 
 /**
+ * @api {get} v2/account/:slug Get account
+ * @apiName GetAccount
+ * @apiGroup Account
+ * @apiVersion 2.0.0
  *
- * Get a single account
+ * @apiDescription Get an account
  *
+ * @apiParam {Number} slug Account unique slug.
+ *
+ * @apiSuccess {object} account Details from the account.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *        "status": "success",
+ *        "account": {}
+ *    }]
  */
 exports.show = function(req, res) {
   console.log('Show account with slug: ' + req.params.slug);
@@ -61,17 +73,8 @@ exports.show = function(req, res) {
       ]}
     ]
   }).then(function(account) {
-    // console.log(account);
-    account.getRegistries().then(function(registries){
 
-      // restructure registries
-      var r=[];
-      for (var i=0; i<registries.length; i++){
-        var rr = registries[ i].dataValues;
-        rr.settings = rr.account_registries;
-        delete rr.account_registries;
-        r.push(rr);
-      }
+    account.getRegistries().then(function(registries){
 
       var a = {
         id: account.dataValues.id,
@@ -84,7 +87,6 @@ exports.show = function(req, res) {
         contact: account.dataValues.contact,
         url: account.dataValues.url,
         location: account.dataValues.location,
-
         avatar: account.avatar,
         headerImg: account.headerImg,
         files: account.files,
@@ -100,23 +102,12 @@ exports.show = function(req, res) {
         a.people.push(u);
       }
 
-      //console.log(a);
+      a.registries = registries;
 
-      a.registries = r;
-
-      return res.json({
-        status: 'success',
-        account: a
-      });
-
-
-
-
-
+      return res.json(a);
     });
-
-
   }).catch(function(err){
+    console.log('err', err);
     return handleError(res,err);
   });
 };
@@ -212,6 +203,41 @@ exports.addFile = function(req,res){
 };
 
 
+/**
+ * @api {post} v2/account/:id/registry/:rid Update account registry
+ * @apiName UpdateAccountRegistry
+ * @apiGroup Account
+ * @apiVersion 2.0.0
+ *
+ * @apiDescription Update an existing registry connected to a publication account
+ *
+ * @apiParam {Number} id Account unique ID.
+ * @apiParam {Number} rid Registry unique ID.
+ *
+ * @apiSuccess {object} registry Details from the account registry with updated result.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *        "id": "1"
+ *    }]
+ */
+exports.updateRegistry = function(req,res){
+  var fields = req.body;
+  models.account_registries.findById(req.params.rid).then(function(registry){
+
+    if (fields.active===false) {
+      fields.autoadd=false;
+    }
+    registry.updateAttributes(fields).then(function(result) {
+      return res.json(result);
+    }).catch(function(err){
+      return handleError(res,err);
+    })
+  }).catch(function(err){
+    return handleError(res,err);
+  });
+}
 
 // Error handler
 function handleError(res, err) {

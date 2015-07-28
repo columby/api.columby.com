@@ -22,12 +22,13 @@ module.exports = {
 
   nodemon: function () {
 
-    env({
-      file: "server/config/env.js",
-      vars: {
-        // any variables you want to overwrite
-      }
-    });
+    try {
+      env({
+        file: "server/config/env.js"
+      });
+    } catch(err) {
+      console.log('No env.js found');
+    }
 
     return nodemon({
         script: 'server/server.js',
