@@ -132,35 +132,31 @@ exports.create = function(req, res) {
 
 
 /**
+ * @api {put} v2/account/:slug Update account
+ * @apiName UpdateAccount
+ * @apiGroup Account
+ * @apiVersion 2.0.0
  *
- * Updates an existing account in the DB.
- * Access control is done in previous middleware!
+ * @apiDescription Update an account
  *
- * @param req
- * @param res
+ * @apiParam {Number} id Account unique id.
  *
+ * @apiSuccess {object} result Update status.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *        "status": "success",
+ *        "account": {}
+ *    }]
  */
 exports.update = function(req, res) {
-
-  models.Account.findById(req.body.id).then(function(account){
-    // Set new avatar if needed
-    if (req.body.avatar){
-      account.setAvatar(req.body.avatar);
-    }
-    // Set new header image if needed
-    if (req.body.headerImg){
-      account.setHeaderImg(req.body.headerImg);
-    }
-
-    //console.log('account', account);
-    account.updateAttributes(req.body).then(function(account) {
-      console.log('success', account.dataValues);
-      res.json(account);
-    }).catch(function(err) {
-      handleError(res,err);
-    });
-  }).catch(function(err){
-    handleError(res,err);
+  models.Account.update(req.body, { where: { id: req.params.id } } ).then(function(result){
+    console.log(result);
+    return res.json({status: 'success', statusCode: 200, msg: result});
+  }).catch(function(err) {
+    console.log(err);
+    return handleError(res,err);
   });
 };
 
@@ -238,6 +234,8 @@ exports.updateRegistry = function(req,res){
     return handleError(res,err);
   });
 }
+
+
 
 // Error handler
 function handleError(res, err) {

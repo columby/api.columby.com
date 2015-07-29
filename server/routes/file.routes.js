@@ -23,35 +23,28 @@ module.exports = function(app) {
     controller.finishUpload
   );
 
-  //router.get('/createDerivative',
-  //  controller.createDerivative);
-
   router.get('/',
     auth.validateJWT,
     auth.validateUser,
     auth.ensureAuthenticated,
-    perm.canUpload,
     controller.index);
 
   router.get('/:id',
     controller.show);
 
-  router.post('/',
-    auth.ensureAuthenticated,
-    // check upload limit
-    // validate upload space
-    // upload using multer middleware
-
-    // finishUpload
-      controller.create);
-
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.update);
+    perm.canUpdate,
+    controller.update);
 
   router.delete('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.destroy);
+    perm.canDelete,
+    controller.delete);
 
   app.use('/v2/file', router);
 };

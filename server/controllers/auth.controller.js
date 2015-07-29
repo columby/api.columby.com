@@ -12,8 +12,7 @@ var config = require('../config/config'),
     models = require('../models/index'),
     request = require('request'),
     userCtrl = require('./user.controller'),
-    tokenCtrl = require('./token.controller')
-''
+    tokenCtrl = require('./token.controller');
 
 
 /**

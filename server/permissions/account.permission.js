@@ -53,6 +53,9 @@ exports.canEdit = function(req, res, next) {
     return next();
   }
 
+  if (parseInt(req.user.primary.id) === parseInt(req.params.id)) {
+    return next();
+  }
   // Iterate over user's accounts
   for (var i=0; i<req.user.organisations.length; i++){
     // Check if account is same as requested account
@@ -68,8 +71,4 @@ exports.canEdit = function(req, res, next) {
       }
     }
   }
-
-  // All failed, no access :(
-  console.log('No access');
-  return res.json({ status:'err', msg:'No access.' });
 };
