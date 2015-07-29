@@ -13,7 +13,7 @@ function validateAccountAccess(user, account_id, cb) {
   for (var i=0; i<user.organisations.length; i++){
     // Check if account is same as requested account
     console.log(user.organisations.id);
-    if (parseInt(req.user.organisations[ i].id) === parseInt(account_id)) {
+    if (parseInt(user.organisations[ i].id) === parseInt(account_id)) {
       // Check if account has the right role to edit.
       var role = user.organisations[ i].role;
       // User account with role owner or admin can edit an account. (not editor or viewer)
