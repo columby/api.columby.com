@@ -1,7 +1,5 @@
 'use strict';
 
-var Hashids = require('hashids'),
-  hashids = new Hashids('Salt', 8);
 
 module.exports = function(sequelize, DataTypes) {
 
@@ -14,7 +12,8 @@ module.exports = function(sequelize, DataTypes) {
     {
       shortid: {
         type: DataTypes.STRING,
-        unique: true
+        unique: true,
+        allowNull: false
       },
       uuid: {
         type: DataTypes.UUID
@@ -75,17 +74,6 @@ module.exports = function(sequelize, DataTypes) {
       }
     }
   );
-
-  /**
-   *
-   * Set shortid after creating a new account
-   *
-   */
-  Dataset.afterCreate( function(dataset) {
-    dataset.updateAttributes({
-      shortid: hashids.encode(parseInt(String(Date.now()) + String(dataset.id)))
-    });
-  });
 
   return Dataset;
 };

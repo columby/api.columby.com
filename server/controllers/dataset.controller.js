@@ -6,7 +6,9 @@
 var models = require('../models/index'),
     datasetPerms = require('../permissions/dataset.permission'),
     tagCtrl = require('../controllers/tag.controller'),
-    config = require('../config/config');
+    config = require('../config/config'),
+    Hashids = require('hashids'),
+    hashids = new Hashids('Salt', 8);
 
 
 /**
@@ -110,12 +112,17 @@ exports.show = function(req, res) {
  */
 exports.create = function(req, res) {
 
-  var data = req.body;
-  delete data.account;
-  console.log('Creating dataset: ', data);
+  var dataset = {
+    title: req.body.title,
+    description: req.body.description,
+    account_id: req.body.account_id,
+    private: true,
+    shortid: hashids.encode(parseInt(String(Date.now()) + String(Math.floor((Math.random() * 10) + 1))))
+  };
+  console.log('Creating dataset: ', dataset);
 
   // Create a new dataset
-  models.Dataset.create(data).then(function(dataset) {
+  models.Dataset.create(dataset).then(function(dataset) {
     console.log('[Controller Dataset] - Dataset created. ');
     return res.json(dataset);
   }).catch(function(err){
