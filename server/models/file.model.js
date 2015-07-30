@@ -80,38 +80,27 @@ module.exports = function(sequelize, DataTypes) {
             as: 'account'
           });
         }
+      },
+      hooks: {
+        // Create a slug based on the account name
+
+        beforeCreate: function(model) {
+          model.filename = slugify(path.basename(model.filename, path.extname(model.filename))) + path.extname(model.filename);
+        },
+
+        afterCreate: function(model) {
+          console.log('changing filename after create');
+          // update filename
+          model.update({
+            filename: path.basename(model.filename, path.extname(model.filename)) + '_' + model.id + path.extname(model.filename)
+          }).then(function(result){
+            //console.log('updated', result);
+          }).catch(function(err){
+            //console.log('err', err);
+          });
+        }
       }
     }
   );
-
-  /**
-   *
-   * Create a slug based on the account name
-   *
-   */
-  File.beforeCreate( function(model, fn){
-    var filename = model.filename;
-    var ext = path.extname(filename);
-    var basename = path.basename(filename, ext);
-    filename = slugify(basename) + ext;
-    model.filename = filename;
-  });
-
-  File.afterCreate(function(model,fn) {
-
-    // update filename and shortid
-    var filename = model.filename;
-    var id = model.id;
-    var ext = path.extname(filename);
-    var basename = path.basename(filename, ext);
-    model.update({
-      filename: basename + '-' + id + ext
-    }).then(function (success) {
-      //console.log('update success');
-    }).catch(function (err) {
-      //console.log('rrr', err);
-    });
-  });
-
   return File;
 };
