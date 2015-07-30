@@ -14,6 +14,7 @@ module.exports = function(app){
     datasetCtrl.index);
 
   router.get('/:id',
+    datasetPerms.canView,
     datasetCtrl.show);
 
   router.post('/',

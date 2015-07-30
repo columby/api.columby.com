@@ -2,7 +2,9 @@
 
 var models = require('../models/index'),
     authCtrl = require('../controllers/auth.controller'),
-    config = require('../config/config');
+    config = require('../config/config'),
+    jwt    = require('jwt-simple'),
+    moment = require('moment');
 
 
 
@@ -32,6 +34,73 @@ function validateAccountAccess(user, account_id, cb) {
 }
 
 
+exports.canView = function(req,res,next){
+  console.log('validating canview ', req.params);
+  models.Dataset.findOne({
+    where: {
+      shortid: req.params.id
+    },
+    include: [ { model: models.Account, as: 'account' }]
+  }).then(function(dataset){
+    req.dataset = dataset;
+    if (!req.dataset.private) {
+      // public datasets are publicly visible
+      next();
+    } else {
+      // otherwise check access
+      // get jwt
+      req.jwt = req.jwt || {};
+      // Decode the token if present
+      if (req.headers.authorization){
+        try {
+          req.jwt = jwt.decode(req.headers.authorization.split(' ')[1], config.jwt.secret);
+        } catch (err){}
+        // get user
+        req.user = req.user || {};
+        // fetch user if not present and JWT is present
+        if ( (!req.user.id) && (req.jwt.sub) ) {
+          models.User.find({
+            where: { id: req.jwt.sub },
+            include: [ { model: models.Account, as: 'account' } ]
+          }).then(function(user){
+            // transform user
+            var u = user.dataValues;
+            u.organisations = [];
+            for (var i=0; i<user.account.length; i++) {
+              var a = user.account[ i].dataValues;
+              a.role = a.UserAccounts.dataValues.role;
+              delete a.UserAccounts;
+              if (a.primary) {
+                u.primary = a;
+              } else {
+                u.organisations.push(a);
+              }
+            }
+            delete u.account;
+            req.user = u;
+
+            // validate access
+            validateAccountAccess(req.user, dataset.dataValues.account_id, function(result){
+              if (result) {
+                console.log('access granted');
+                next();
+              } else {
+                return res.json({result: null, msg: 'No access'});
+              }
+            });
+          });
+        } else {
+          return res.json({result: null, msg: 'No User'});
+        }
+      } else  {
+        return res.json({result:null, msg: 'No JWT'});
+      }
+    }
+  }).catch(function(err){
+    console.log(err);
+    return res.status(401).json({status: 'Error', msg: 'Error finding dataset: ' + req.params.id});
+  });
+}
 
 /***
  *

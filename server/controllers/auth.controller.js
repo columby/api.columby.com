@@ -48,6 +48,7 @@ exports.validateJWT = function(req,res,next){
   next();
 };
 
+
 /**
  *
  * Validate the user from the JWT token
