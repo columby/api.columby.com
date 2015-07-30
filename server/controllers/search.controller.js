@@ -14,8 +14,8 @@ exports.search = function(req, res) {
   }
 
   var q = req.query.query;
-
-  // @todo Sequelize.or does not seem to work or I implemented it wrongly.. (marcelfw)
+  var limit = req.query.limit || 50;
+  if (limit>50) { limit=50; }
 
   // Define dataset filters
   var dataset_wheres = [];
@@ -81,7 +81,7 @@ exports.search = function(req, res) {
       { private: false },
       Sequelize.or.apply(null,dataset_wheres)
     ),
-    limit: 50,
+    limit: limit,
     offset: 0,
     order: 'created_at DESC'
   }).then(function(result){
@@ -100,11 +100,13 @@ exports.search = function(req, res) {
       });
     }
 
-    console.log('Searching accounts');
     Account.findAndCountAll({
-      where: Sequelize.or.apply(null, account_wheres)
+      where: Sequelize.or.apply(null, account_wheres),
+      limit: limit,
+      offset: 0,
+      order: 'created_at DESC'
     }).then(function(result){
-      //console.log('account result: ', result);
+      // console.log('account result: ', result);
       // add accounts
       response.accounts.count= result.count;
 
@@ -124,7 +126,6 @@ exports.search = function(req, res) {
         if (a.weight < b.weight) { return +1; }
         return 0;
       });
-
       // Send back result
       return res.json(response);
     }).catch(function(err){
@@ -133,23 +134,6 @@ exports.search = function(req, res) {
   }).catch(function(err){
     return handleError(res,err);
   });
-}
-
-
-function searchAccount(params, cb) {
-
-  Dataset.findAll({
-    where: {
-      account_id: params.accountId,
-      title: {like: '%' + params.query + '%'}
-    },
-    limit: params.limit || 50,
-    offset: params.offset || 0
-  }).then(function(datasets){
-    cb(datasets);
-  }).catch(function(error){
-    cb(error);
-  })
 }
 
 

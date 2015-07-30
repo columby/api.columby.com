@@ -21,8 +21,8 @@ var models = require('../models/index'),
  * @apiParam {Number} account_id Users account id.
  * @apiParam {Number} limit Maximum number of results.
  * @apiParam {Number} offset Query offset.
- * @apiParam {Number} order Query order.
- * @apiParam {String} order Query order
+ * @apiParam {String} order Query order.
+ * @apiParam {String} search Query string
  *
  * @apiSuccess {Object} Array with dataset objects.
  *
