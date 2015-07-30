@@ -81,13 +81,9 @@ module.exports = function(sequelize, DataTypes) {
    * Set shortid after creating a new account
    *
    */
-  Dataset.afterCreate( function(model) {
-    model.updateAttributes({
-      shortid: hashids.encode(parseInt(String(Date.now()) + String(model.id)))
-    }).then(function(result){
-      console.log('[Model Dataset] - Shortid created: ' + result.shortid);
-    }).catch(function(){
-      console.log('[Model Dataset] - Shortid error: ', err);
+  Dataset.afterCreate( function(dataset) {
+    dataset.updateAttributes({
+      shortid: hashids.encode(parseInt(String(Date.now()) + String(dataset.id)))
     });
   });
 
