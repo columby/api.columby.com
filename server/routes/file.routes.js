@@ -13,6 +13,7 @@ module.exports = function(app) {
     auth.validateJWT,
     auth.validateUser,
     auth.ensureAuthenticated,
+    perm.canUpload,
     controller.sign
   );
 

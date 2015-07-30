@@ -68,10 +68,9 @@ exports.canEdit = function(req,res,next){
     include: [ { model: models.Account, as: 'account' }]
   }).then(function(dataset){
     req.dataset = dataset;
-    validateAccountAccess(req.user, req.params.id, function(result){
-      if (!result) {
-        return res.status(401).json({status: 'Error', msg: 'No user found'});
-      }
+    validateAccountAccess(req.user, dataset.dataValues.account_id, function(result){
+      if (!result) { return res.status(401).json({status: 'Error', msg: 'No user found'}); }
+      // Valid
       return next();
     });
   }).catch(function(err){
@@ -95,7 +94,7 @@ exports.canDelete = function(req,res,next){
     include: [ { model: models.Account, as: 'account' }]
   }).then(function(dataset){
     req.dataset = dataset;
-    validateAccountAccess(req.user, req.params.id, function(result){
+    validateAccountAccess(req.user, dataset.dataValues.account_id, function(result){
       if (!result) {
         return res.status(401).json({status: 'Error', msg: 'No user found'});
       }

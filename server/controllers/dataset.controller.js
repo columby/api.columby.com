@@ -199,29 +199,30 @@ exports.destroy = function(req, res) {
  * Create and add a tag to a dataset
  */
 exports.addTag = function(req,res) {
-
-  console.log('Dataset add tag: ', req.body.tag);
-
-  tagCtrl.createTag(req.body.tag, function(tag,err){
-    if (err) {
-      console.log(err);
-      return handleError(res, err);
-    }
-    console.log('tag: ', tag);
-    console.log('id', req.params);
-    models.Dataset.findById(req.params.id).then(function (dataset) {
-      dataset.addTag(tag).then(function (dataset) {
-        console.log(dataset);
-        return res.json({dataset: dataset});
-      }).catch(function (err) {
-        console.log(err);
-        return handleError(res, err);
+  tagCtrl.findOrCreateTag(req.body.tag, function(tag,err){
+    if (err) { return handleError(res, err); }
+    if (tag) {
+      // add tag to dataset
+      req.dataset.addTag(tag.tag).then(function(result){
+        console.log(result);
+        if (result[0]) {
+          tag.added=true;
+        } else {
+          tag.added=false;
+        }
+        return res.json(tag);
+      }).catch(function(err){
+        return handleError(res,err);
       });
-    }).catch(function (err) {
-      return handleError(res, err);
-    });
+    }
+    // models.Dataset.findById(req.params.id).then(function (dataset) {
+    //   dataset.addTag(tag).then(function(result) {
+    //     return res.json({tag: tag, result:result});
+    //   }).catch(function (err) { return handleError(res, err); });
+    // }).catch(function (err) { return handleError(res, err); });
   });
 };
+
 
 /**
  * Detach a tag from a dataset

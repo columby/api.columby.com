@@ -7,21 +7,7 @@
  *
  *
  */
-
-
- function slugify(text) {
-
-   return text.toString().toLowerCase()
-     .replace(/\s+/g, '-')       // Replace spaces with -
-     .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
-     .replace(/\-\-+/g, '-')     // Replace multiple - with single -
-     .replace(/^-+/, '')         // Trim - from start of text
-     .replace(/-+$/, '');        // Trim - from end of text
-                                 // Limit characters
- }
-
-
-module.exports = function(sequelize, DataTypes) {
+ module.exports = function(sequelize, DataTypes) {
 
   /**
    *
@@ -37,7 +23,9 @@ module.exports = function(sequelize, DataTypes) {
       },
 
       slug: {
-        type: DataTypes.STRING
+        type: DataTypes.STRING,
+        unique: true,
+        allowNull: false
       },
 
       created_at:{
@@ -61,10 +49,6 @@ module.exports = function(sequelize, DataTypes) {
       }
     }
   );
-
-  Tag.beforeCreate( function(tag, fn){
-    tag.slug = slugify(tag.text);
-  });
 
   return Tag;
 };
