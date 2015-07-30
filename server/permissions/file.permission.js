@@ -83,11 +83,11 @@ exports.canUpload = function(req, res, next) {
   // Check parameters
   if (!req.jwt) { return res.json({status: 'error', msg: 'No jwt found.'}); }
   if (!req.user) { return res.json({status: 'error', msg: 'No user found.'}); }
-  if (!req.query.account_id) { return res.json({status:'error', msg: 'Required parameter account_id missing.'}); }
+  if (!req.body.account_id) { return res.json({status:'error', msg: 'Required parameter account_id missing.'}); }
   // Admin is allowed
   if (req.user.admin) { return next(); }
   // Check if user can edit requested account id.
-  validateAccountAccess(user, req.query.account_id, function(result){
+  validateAccountAccess(req.user, req.body.account_id, function(result){
     if (!result) { return res.json({status:'error', msg: 'No access.'}); }
 
     // var images = [
