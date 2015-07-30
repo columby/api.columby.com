@@ -8,7 +8,8 @@ var models = require('../models/index'),
     tagCtrl = require('../controllers/tag.controller'),
     config = require('../config/config'),
     Hashids = require('hashids'),
-    hashids = new Hashids('Salt', 8);
+    hashids = new Hashids('Salt', 8),
+    Sequelize = require('sequelize');
 
 
 /**
@@ -16,6 +17,12 @@ var models = require('../models/index'),
  * @apiName GetDatasets
  * @apiGroup Dataset
  * @apiVersion 2.0.0
+ *
+ * @apiParam {Number} account_id Users account id.
+ * @apiParam {Number} limit Maximum number of results.
+ * @apiParam {Number} offset Query offset.
+ * @apiParam {Number} order Query order.
+ * @apiParam {String} order Query order
  *
  * @apiSuccess {Object} Array with dataset objects.
  *
@@ -27,21 +34,42 @@ var models = require('../models/index'),
  */
 exports.index = function(req, res) {
   console.log('Fetching datasets');
-  // Define WHERE clauses
+
+  var limit = req.query.limit || 10;
+  if (limit > 50) { limit = 50; }
+  var offset = req.query.offset || 0;
+  var order = req.query.order || 'created_at DESC';
   var filter = {
-    // Only show public datasets for a general index-show
     private: false
   };
-
   // filter by account id if provided
-  if (req.query.accountId){
-    filter.account_id = req.query.accountId;
+  if (req.query.account_id){
+    filter.account_id = req.query.account_id;
   }
 
-  // Set (default) limit
-  var limit = req.query.limit || 10;
-  // Set (default) offset
-  var offset = req.query.offset || 0;
+  // Search
+  if (req.query.search){
+    console.log('Setting search: '+ req.query.search);
+    // Define dataset filters
+    var wheres = [];
+    var _q = req.query.search.trim().split(' ');
+    for(var idx=0; idx < _q.length; idx++) {
+      wheres.push({
+        title: {
+          ilike: '%'+_q[idx]+'%'
+        }
+      });
+      wheres.push({
+        description: {
+          ilike: '%' + _q[idx] + '%'
+        }
+      });
+    }
+    filter = Sequelize.and(
+      filter,
+      Sequelize.or.apply(null, wheres)
+    );
+  }
 
   models.Dataset.findAndCountAll({
     where: filter,
