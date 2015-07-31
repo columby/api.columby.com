@@ -1,26 +1,6 @@
 'use strict';
 
-var path = require('path'),
-    Hashids = require('hashids'),
-    hashids = new Hashids('Salt', 8);
-
 module.exports = function(sequelize, DataTypes) {
-
-  /**
-   *
-   * Slugify a string.
-   *
-   */
-  function slugify(text) {
-
-    return text.toString().toLowerCase()
-      .replace(/\s+/g, '-')       // Replace spaces with -
-      .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
-      .replace(/\-\-+/g, '-')     // Replace multiple - with single -
-      .replace(/^-+/, '')         // Trim - from start of text
-      .replace(/-+$/, '');        // Trim - from end of text
-                                  // Limit characters
-  }
 
   /**
    *
@@ -80,27 +60,9 @@ module.exports = function(sequelize, DataTypes) {
             as: 'account'
           });
         }
-      },
-      hooks: {
-        // Create a slug based on the account name
-
-        beforeCreate: function(model) {
-          model.filename = slugify(path.basename(model.filename, path.extname(model.filename))) + path.extname(model.filename);
-        },
-
-        afterCreate: function(model) {
-          console.log('changing filename after create');
-          // update filename
-          model.update({
-            filename: path.basename(model.filename, path.extname(model.filename)) + '_' + model.id + path.extname(model.filename)
-          }).then(function(result){
-            //console.log('updated', result);
-          }).catch(function(err){
-            //console.log('err', err);
-          });
-        }
       }
     }
   );
+
   return File;
 };

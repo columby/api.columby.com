@@ -8,7 +8,10 @@ var models = require('../models/index'),
     fs = require('fs'),
     knox = require('knox'),
     gm = require('gm').subClass({ imageMagick: true }),
-    path = require('path');
+    path = require('path'),
+    Hashids = require('hashids'),
+    hashids = new Hashids('Salt', 8);
+
 
 
 var s3client = knox.createClient({
@@ -16,6 +19,23 @@ var s3client = knox.createClient({
   secret: config.aws.secret,
   bucket: config.aws.bucket
 });
+
+
+/**
+ *
+ * Slugify a string.
+ *
+ */
+function slugify(text) {
+
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')       // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
+    .replace(/\-\-+/g, '-')     // Replace multiple - with single -
+    .replace(/^-+/, '')         // Trim - from start of text
+    .replace(/-+$/, '');        // Trim - from end of text
+                                // Limit characters
+}
 
 
 /**
@@ -167,12 +187,17 @@ exports.sign = function(req,res) {
   var fileType = request.filetype;
   var account_id = request.account_id;
 
-  var path = '/files/' + uploadType + '/' + fileName;
+  var s3path = '/files/' + uploadType + '/' + fileName;
 
   // Handle the supplied query parameters
+  var ext = path.extname(fileName);
+  var base = slugify(path.basename(fileName, ext));
+  fileName = base + ext;
+  console.log('after slugify: ' + fileName);
+
   var file = {
     type: uploadType,
-    path: path,
+    path: s3path,
     filename: fileName,
     status: false,
     filetype: fileType,
@@ -182,43 +207,55 @@ exports.sign = function(req,res) {
 
   // Create a File record in the database
   models.File.create(file).then(function(file) {
-    //console.log('File created: ', file.dataValues);
-    // update path with new filename
-    path = '/files/' + uploadType + '/' + file.filename;
+    console.log('File created: ', file.dataValues);
+    fileName = base + '_' + file.dataValues.id + ext;
+    console.log('Filename after save: ' + fileName);
+    file.update({
+        filename: fileName
+      }).then(function(file){
+        console.log('file updated with new filename ' + file.dataValues.filename);
+        // update path with new filename
+        var s3path = '/files/' + uploadType + '/' + file.dataValues.filename;
+        console.log('s3path: ' + s3path);
 
-    var expiration = moment().add(15, 'm').toDate(); //15 minutes
-    var readType = 'private';
+        var expiration = moment().add(15, 'm').toDate(); //15 minutes
+        var readType = 'private';
 
-    var s3Policy = {
-      'expiration': expiration,
-      'conditions': [{ 'bucket': config.aws.bucket },
-      ['starts-with', '$key', config.environment + path],
-      { 'acl': readType },
-      { 'success_action_status': '201' },
-      ['starts-with', '$Content-Type', request.filetype],
-      ['content-length-range', 2048, request.filesize], //min and max
-    ]};
+        var s3Policy = {
+          'expiration': expiration,
+          'conditions': [{ 'bucket': config.aws.bucket },
+          ['starts-with', '$key', config.environment + s3path],
+          { 'acl': readType },
+          { 'success_action_status': '201' },
+          ['starts-with', '$Content-Type', request.filetype],
+          ['content-length-range', 2048, request.filesize], //min and max
+        ]};
 
-    var stringPolicy = JSON.stringify(s3Policy);
-    var base64Policy = new Buffer(stringPolicy, 'utf-8').toString('base64');
+        var stringPolicy = JSON.stringify(s3Policy);
+        var base64Policy = new Buffer(stringPolicy, 'utf-8').toString('base64');
 
-    // sign policy
-    var signature = crypto.createHmac('sha1', config.aws.secret)
-        .update(new Buffer(base64Policy, 'utf-8')).digest('base64');
+        // sign policy
+        var signature = crypto.createHmac('sha1', config.aws.secret)
+            .update(new Buffer(base64Policy, 'utf-8')).digest('base64');
 
-    var credentials = {
-      url: config.aws.endpoint,
-      fields: {
-        key: config.environment + path,
-        AWSAccessKeyId: config.aws.key,
-        acl: readType,
-        policy: base64Policy,
-        signature: signature,
-        'Content-Type': request.filetype,
-        success_action_status: 201
-      }
-    };
-    return res.json({file:file, credentials:credentials});
+        var credentials = {
+          url: config.aws.endpoint,
+          fields: {
+            key: config.environment + s3path,
+            AWSAccessKeyId: config.aws.key,
+            acl: readType,
+            policy: base64Policy,
+            signature: signature,
+            'Content-Type': request.filetype,
+            success_action_status: 201
+          }
+        };
+        console.log(credentials);
+        return res.json({file:file, credentials:credentials});
+
+      }).catch(function(err){
+        console.log('err', err);
+      });
   }).catch(function (error) {
     return handleError(res, error);
   });
