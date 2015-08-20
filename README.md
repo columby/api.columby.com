@@ -27,27 +27,16 @@ All development and pull-requests are handled in the development branch.
 ### Development
 To run the API locally, use gulp to start the process. A configuration file at /server/config/env.js is required with the proper environment variables.
 
-    gulp
+    gulp serve
 
 ### Staging / Production
-Create a production version with Grunt:
+Create a production version with Gulp:
 
-    gulp version
-    gulp apidoc
     gulp build
 
 Serve ./dist/server/server.js using gulp, or the columby-api upstart process.
 
-    sudo service columby-api start
-
-
-## Installation
-* Create a new Digital Ocean Droplet with Ubuntu 14.04.
-* Run the install script ./install/install.sh This will create the user and required folders and install the software.  
-
-
-    sh ./install/install.sh
-
+    pm2 start
 
 ## Contact
 Email: [admin@columby.com](mailto:admin@columby.com)  
