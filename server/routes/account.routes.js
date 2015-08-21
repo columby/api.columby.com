@@ -2,6 +2,7 @@
 
 var express = require('express'),
     controller = require('./../controllers/account.controller'),
+    permission = require('./../permissions/account.permission'),
     auth = require('./../controllers/auth.controller'),
     router = express.Router();
 
@@ -11,29 +12,48 @@ module.exports = function(app) {
 
 
   router.get('/',
-    auth.checkJWT,
-      controller.index);
+    auth.validateJWT,
+    controller.index
+  );
 
-  router.get('/:id',
-    auth.checkJWT,
-    //controller.canEdit,
-      controller.show);
+  router.get('/:slug',
+    auth.validateJWT,
+    auth.validateUser,
+    controller.show
+  );
 
   router.post('/',
-    auth.isAdmin,
-      controller.create);
-
-  router.post('/addFile',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    controller.canEdit,
-    controller.addFile);
+    permission.canCreate,
+    controller.create
+  );
+
+
+  router.post('/:id/addFile',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    permission.canEdit,
+    controller.addFile
+  );
 
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    controller.canEdit,
-      controller.update);
-  //router.patch('/:id'    , controller.update);
-  //router.delete('/:id'   , controller.destroy);
+    permission.canEdit,
+    controller.update
+  );
+
+  router.put('/:id/registry/:rid',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    permission.canEdit,
+    controller.updateRegistry
+  );
 
   app.use('/v2/account', router);
 };

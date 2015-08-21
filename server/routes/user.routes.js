@@ -8,44 +8,15 @@
 var express = require('express'),
     controller = require('./../controllers/user.controller'),
     auth = require('./../controllers/auth.controller'),
+    permission = require('./../permissions/user.permission'),
     router = express.Router();
 
 
 module.exports = function(app) {
 
   /**
-   * Check if a user can edit a requested user account.
    *
-   * @param req
-   * @param res
-   * @param next
-   *
-   */
-  function canEdit(req, res, next) {
-    console.log(req.params);
-    console.log(req.body);
-    if (req.user) {
-      if ((req.user.roles.indexOf('admin')) || (req.user._id === req.params.id)) {
-        next();
-      }
-    } else {
-      res.status(401).json('Not authorized');
-    }
-  }
-
-
-  /**
-   * Get website configuration (public keys etc).
-   *
-   */
-  router.post('/config',
-    controller.config);
-
-
-  /**
    * Login and registration functions
-   *
-   * Roles: visitor
    *
    */
   router.post('/login', controller.login);
@@ -54,37 +25,41 @@ module.exports = function(app) {
 
 
   /**
+   *
    * Show currently logged in user account
    *
-   * Roles: admin, authenticated
-   *
-   */
+   **/
   router.post( '/me',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    controller.me)
-  ;
+    controller.me
+  );
 
   /**
+   *
    * List user accounts
    *
-   * Roles: admin
-   *
-   */
+   **/
   router.get('/',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    auth.isAdmin,
-    controller.index);
+    permission.canShow,
+    controller.index
+  );
 
   /**
    * Show a user accounts
    *
-   * Roles: admin
-   *
-   */
-  router.get('/:id',
+   **/
+  router.get('/:slug',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    auth.isAdmin,
-    controller.show);
+    permission.canShow,
+    controller.show
+  );
 
   /**
    * Create a new user
@@ -96,16 +71,26 @@ module.exports = function(app) {
     controller.register);
 
   /**
-   * Update an existing user account
    *
-   * Roles: admin
-   * Permissions: edit own account
+   * Update an existing user account
    *
    */
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-    canEdit,
-    controller.update);
+    permission.canEdit,
+    controller.update
+  );
+
+  router.delete('/:id',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    permission.canDelete,
+    controller.delete
+  )
+
 
   /**
    * Apply the routes to our application

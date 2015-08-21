@@ -1,18 +1,10 @@
 'use strict';
 
-var config = require('../config/environment/index.js'),
+var config = require('../config/config'),
     Dataset = require('../models/index').Dataset,
     Account = require('../models/index').Account,
     Sequelize = require('sequelize')
 ;
-
-/**
-
-General search
-Search datasets within a collection
-Search datasets within a publication account
-
-**/
 
 
 // Get list of searchs
@@ -21,22 +13,9 @@ exports.search = function(req, res) {
     handleError(res, 'error, no query provided');
   }
 
-  if (req.query.collectionId) {
-    searchCollection(req.query);
-  } else if (req.query.accountId) {
-    searchAccount(req.query);
-  } else {
-    generalSearch(req);
-  }
-};
-
-
-
-function generalSearch(params){
-
-  var q = params.query;
-
-  // @todo Sequelize.or does not seem to work or I implemented it wrongly.. (marcelfw)
+  var q = req.query.query;
+  var limit = req.query.limit || 50;
+  if (limit>50) { limit=50; }
 
   // Define dataset filters
   var dataset_wheres = [];
@@ -57,10 +36,8 @@ function generalSearch(params){
   // Define Account filters
   var account_wheres = [];
   for(idx=0; idx < _q.length; idx++) {
-    account_wheres.push({name: { ilike: "%"+_q[idx]+"%" }});
+    account_wheres.push({displayName: { ilike: "%"+_q[idx]+"%" }});
   }
-
-  var chain = new Sequelize.Utils.QueryChainer();
 
   // calculate fuzzy weight
   // start weight is weights[0]
@@ -83,84 +60,87 @@ function generalSearch(params){
   var weight_DatasetDescription = [ 5, 1 ];
   var weight_AccountName = [ 10, 2 ];
 
-  new Sequelize.Utils.QueryChainer()
+  var response = {
+    datasets: {
+      count: 0,
+      rows: []
+    },
+    accounts: {
+      count: 0,
+      rows: []
+    },
+    tags: {
+      count: 0,
+      rows: []
+    }
+  };
 
-    .add(Dataset.findAll({
-      where: Sequelize.and(
-        { private: false },
-        Sequelize.or.apply(null,dataset_wheres)
-    )})) // .on('sql', console.log))
+  // Do the search
+  Dataset.findAndCountAll({
+    where: Sequelize.and(
+      { private: false },
+      Sequelize.or.apply(null,dataset_wheres)
+    ),
+    limit: limit,
+    offset: 0,
+    order: 'created_at DESC'
+  }).then(function(result){
+    //console.log(result);
+    response.datasets.count = result.count;
 
-    .add(Account.findAll({where: Sequelize.or.apply(null, account_wheres)})) // .on('sql', console.log))
+    // Add datasets
+    for(var idx=0; idx < result.rows.length; idx++) {
+      //console.log('adding: ', result[ idx]);
+      response.datasets.rows.push({
+        contentType: 'dataset',
+        title: result.rows[idx].title,
+        description: result.rows[idx].description,
+        shortid: result.rows[ idx].shortid,
+        weight: weightFunc(weight_DatasetTitle, result.rows[idx].title) + weightFunc(weight_DatasetDescription, result.rows[idx].description)
+      });
+    }
 
-    .run()
-
-    .then(function(_results){
-      var results = [];
-      // add datasets
-      for(var idx=0; idx < _results[0].length; idx++) {
-        results.push({
-          contentType: 'dataset',
-          title: _results[0][idx].title,
-          description: _results[0][idx].description,
-          shortid: _results[ 0][ idx].shortid,
-          weight: weightFunc(weight_DatasetTitle, _results[0][idx].title) + weightFunc(weight_DatasetDescription, _results[0][idx].description)
-        });
-      }
+    Account.findAndCountAll({
+      where: Sequelize.or.apply(null, account_wheres),
+      limit: limit,
+      offset: 0,
+      order: 'created_at DESC'
+    }).then(function(result){
+      // console.log('account result: ', result);
       // add accounts
-      for(var idx=0; idx < _results[1].length; idx++) {
-        results.push({
+      response.accounts.count= result.count;
+
+      for(var idx=0; idx < result.rows.length; idx++) {
+        response.accounts.rows.push({
           contentType: 'account',
-          title: _results[1][idx].name,
-          slug: _results[1][idx].slug,
+          title: result.rows[ idx].displayName,
+          slug: result.rows[ idx].slug,
           description: '',
-          weight: weightFunc(weight_AccountName, _results[0][idx].name)
+          weight: weightFunc(weight_AccountName, result.rows[ idx].displayName)
         });
       }
+
       // sort on weight
-      results.sort(function(a,b){
-        if (a.weight > b.weight) {
-          return -1;
-        }
-        if (a.weight < b.weight) {
-          return +1;
-        }
+      response.datasets.rows.sort(function(a,b){
+        if (a.weight > b.weight) { return -1; }
+        if (a.weight < b.weight) { return +1; }
         return 0;
       });
-      return res.json(results);
-    })
-    .catch(function(err){
-      console.log(err);
-      handleError(res, err);
+      // Send back result
+      return res.json(response);
+    }).catch(function(err){
+      return handleError(res,err);
     });
-
-  //return res.json({status:"ok", query:query});
+  }).catch(function(err){
+    return handleError(res,err);
+  });
 }
 
 
-
-function searchCollection(params){
-
-}
-
-
-function searchAccount(params, cb) {
-
-  Dataset.findAll({
-    where: {
-      account_id: params.accountId,
-      title: {like: '%' + params.query + '%'}
-    },
-    limit: params.limit || 50,
-    offset: params.offset || 0
-  }).then(function(datasets){
-    cb(datasets);
-  }).catch(function(error){
-    cb(error);
-  })
-}
-
-
+/***
+ * Error handler
+ ***/
 function handleError(res, err) {
-  return res.send(500, err);
+  console.log('Search error: ', err);
+  return res.send({status: 'error', msg:err});
 }

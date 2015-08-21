@@ -3,8 +3,8 @@
 var express = require('express'),
   controller = require('./../controllers/tag.controller'),
   auth = require('./../controllers/auth.controller'),
+  tagPerms = require('./../permissions/tag.permission'),
   router = express.Router();
-
 
 
 module.exports = function(app) {
@@ -12,9 +12,12 @@ module.exports = function(app) {
   router.get('/',
     controller.index);
 
-  router.post('/',
-    auth.ensureAuthenticated,
-    controller.create);
+  // router.post('/',
+  //   auth.validateJWT,
+  //   auth.validateUser,
+  //   auth.ensureAuthenticated,
+  //   tagPerms.canCreate,
+  //   controller.create);
 
   router.get('/:slug',
     controller.show);

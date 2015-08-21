@@ -1,18 +1,37 @@
 'use strict';
 
-/**
- *
- * Dependencies
- *
- */
 var models = require('../models/index');
 
 
-/**
- *
- * Get list of Tags
- *
- */
+function slugify(text) {
+  return text.toString().toLowerCase()
+    .replace(/\s+/g, '-')       // Replace spaces with -
+    .replace(/[^\w\-]+/g, '')   // Remove all non-word chars
+    .replace(/\-\-+/g, '-')     // Replace multiple - with single -
+    .replace(/^-+/, '')         // Trim - from start of text
+    .replace(/-+$/, '');        // Trim - from end of text
+                                // Limit characters
+}
+
+
+exports.findOrCreateTag = function(tag, cb){
+  tag.slug = slugify(tag.text);
+  console.log('Finding or create tag.', tag);
+  models.Tag.findOrCreate({
+    where: ['slug=? or text=?', tag.slug, tag.text],
+    defaults: tag
+  }).then(function(tag) {
+    var result = {
+      created: tag[ 1],
+      tag: tag[ 0]
+    };
+    return cb(result);
+  }).catch(function(err){
+    return cb(null,err);
+  });
+}
+
+
 exports.index = function(req, res) {
   console.log('index tags', req.query);
   console.log(req.params);
@@ -81,6 +100,7 @@ exports.show = function(req, res) {
  */
 exports.create = function(req,res){
   console.log('Creating tag, ', req.body);
+
   models.Tag.find({where:{text:req.body.text}}).then(function(model) {
     if (model && model.id){
       console.log('existing term', model.dataValues);

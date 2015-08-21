@@ -5,66 +5,71 @@
  */
 var models = require('../models/index'),
     datasetPerms = require('../permissions/dataset.permission'),
-  config = require('../config/environment/index'),
-  jwt = require('jwt-simple'),
-  moment = require('moment');
-
-
-
-exports.extractlink = function(req,res) {
-  console.log(req.params);
-  console.log(req.query);
-  var uri = req.query.uri;
-  console.log(uri);
-
-  // get link properties
-  if (uri){
-    req.head(uri, function(err, result, body){
-      if (res.statusCode !== 200) {
-        console.log('invalid url');
-      } else {
-        // check for file
-        console.log('valid url');
-        // check for arcgis
-
-      }
-
-
-      res.json({
-        headers: result,
-        body: body
-      });
-      console.log('content-type:', result.headers['content-type']);
-      console.log('content-length:', result.headers['content-length']);
-    });
-  } else {
-    res.json({err:'no uri'});
-  }
-};
+    tagCtrl = require('../controllers/tag.controller'),
+    config = require('../config/config'),
+    Hashids = require('hashids'),
+    hashids = new Hashids('Salt', 8),
+    Sequelize = require('sequelize');
 
 
 /**
+ * @api {get} /dataset Request a list of datasets
+ * @apiName GetDatasets
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
  *
- * Get list of datasets.
+ * @apiParam {Number} account_id Users account id.
+ * @apiParam {Number} limit Maximum number of results.
+ * @apiParam {Number} offset Query offset.
+ * @apiParam {String} order Query order.
+ * @apiParam {String} search Query string
  *
+ * @apiSuccess {Object} Array with dataset objects.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *       "title": "Dataset title"
+ *    }]
  */
 exports.index = function(req, res) {
   console.log('Fetching datasets');
-  // Define WHERE clauses
+
+  var limit = req.query.limit || 10;
+  if (limit > 50) { limit = 50; }
+  var offset = req.query.offset || 0;
+  var order = req.query.order || 'created_at DESC';
   var filter = {
-    // Only show public datasets for a general index-show
     private: false
   };
-
   // filter by account id if provided
-  if (req.query.accountId){
-    filter.account_id = req.query.accountId;
+  if (req.query.account_id){
+    filter.account_id = req.query.account_id;
   }
 
-  // Set (default) limit
-  var limit = req.query.limit || 10;
-  // Set (default) offset
-  var offset = req.query.offset || 0;
+  // Search
+  if (req.query.search){
+    console.log('Setting search: '+ req.query.search);
+    // Define dataset filters
+    var wheres = [];
+    var _q = req.query.search.trim().split(' ');
+    for(var idx=0; idx < _q.length; idx++) {
+      wheres.push({
+        title: {
+          ilike: '%'+_q[idx]+'%'
+        }
+      });
+      wheres.push({
+        description: {
+          ilike: '%' + _q[idx] + '%'
+        }
+      });
+    }
+    filter = Sequelize.and(
+      filter,
+      Sequelize.or.apply(null, wheres)
+    );
+  }
 
   models.Dataset.findAndCountAll({
     where: filter,
@@ -83,10 +88,20 @@ exports.index = function(req, res) {
   });
 };
 
+
 /**
+ * @api {get} /dataset/:slug Request a datasets
+ * @apiName GetDataset
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
  *
- * Show a single dataset.
+ * @apiSuccess {Object} dataset object.
  *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    {
+ *       "title": "Dataset title"
+ *    }
  */
 exports.show = function(req, res) {
   // Show only if status is public and user can edit the dataset.
@@ -106,18 +121,11 @@ exports.show = function(req, res) {
       { model: models.Reference, as: 'references' }
     ]
   }).then(function(dataset) {
-    // return if result is empty
-    if (!dataset){
+    if (!dataset) { return res.json(dataset); }
+    dataset.getRegistries().then(function(result){
+      dataset.dataValues.registries = result;
+      req.dataset = dataset;
       return res.json(dataset);
-    }
-    req.dataset = dataset;
-    // Check access
-    datasetPerms.canViewDataset(req, function(access){
-      if (access === true) {
-        return res.json(dataset);
-      } else {
-        return res.status(401).json({status: 'Error', msg: 'No access'});
-      }
     });
   }).catch(function(err){
     return handleError(res, err);
@@ -132,22 +140,19 @@ exports.show = function(req, res) {
  */
 exports.create = function(req, res) {
 
-  var d = req.body;
-
-  // Handle tags
-  if (d.tags ) {
-    //d.tags = d.tags.split(',');
-  }
+  var dataset = {
+    title: req.body.title,
+    description: req.body.description,
+    account_id: req.body.account_id,
+    private: true,
+    shortid: hashids.encode(parseInt(String(Date.now()) + String(Math.floor((Math.random() * 10) + 1))))
+  };
+  console.log('Creating dataset: ', dataset);
 
   // Create a new dataset
-  models.Dataset.create(req.body).then(function(dataset) {
-    //console.log('Dataset created: ', dataset);
-    dataset.setAccount(req.body.account.id).then(function(dataset) {
-      console.log('Dataset account attached: ', dataset);
-      return res.json(dataset);
-    }).catch(function(err) {
-      handleError(res,err);
-    });
+  models.Dataset.create(dataset).then(function(dataset) {
+    console.log('[Controller Dataset] - Dataset created. ');
+    return res.json(dataset);
   }).catch(function(err){
     handleError(res,err);
   });
@@ -156,22 +161,15 @@ exports.create = function(req, res) {
 
 // Updates an existing dataset in the DB.
 exports.update = function(req, res) {
-
-  if(req.body._id) { delete req.body._id; }
-
-  models.Dataset.find(req.params.id).then(function(dataset){
-    if(!dataset) { return res.send(404); }
-
-    // Set new header image if needed
-    if (req.body.headerImg){
-      dataset.setHeaderImg(req.body.headerImg);
-    }
-
-    dataset.updateAttributes(req.body).then(function(dataset) {
-      return res.json(dataset);
-    }).catch(function(err) {
-      handleError(res,err);
-    });
+  models.Dataset.update(
+    req.body,
+    {
+      where: {
+        id: req.body.id
+      }
+    }).then(function(result){
+    console.log('Update success: ', result);
+    return res.json(req.body);
   }).catch(function(err){
     handleError(res,err);
   });
@@ -236,28 +234,30 @@ exports.destroy = function(req, res) {
  * Create and add a tag to a dataset
  */
 exports.addTag = function(req,res) {
-
-  var tag = req.body.tag;
-  models.Tag.findOrCreate({
-    where: {
-      text: tag.text
-    }
-  }).spread(function(tag, created){
-    console.log('created: ', created);
-    console.log(created);
-    models.Dataset.find(req.params.id).then(function (dataset) {
-      dataset.addTag(tag.id).then(function (dataset) {
-        return res.json({dataset: dataset});
-      }).catch(function (err) {
-        return handleError(res, err);
+  tagCtrl.findOrCreateTag(req.body.tag, function(tag,err){
+    if (err) { return handleError(res, err); }
+    if (tag) {
+      // add tag to dataset
+      req.dataset.addTag(tag.tag).then(function(result){
+        console.log(result);
+        if (result[0]) {
+          tag.added=true;
+        } else {
+          tag.added=false;
+        }
+        return res.json(tag);
+      }).catch(function(err){
+        return handleError(res,err);
       });
-    }).catch(function (err) {
-      return handleError(res, err);
-    });
-  }).catch(function(err){
-    return handleError(res,err);
+    }
+    // models.Dataset.findById(req.params.id).then(function (dataset) {
+    //   dataset.addTag(tag).then(function(result) {
+    //     return res.json({tag: tag, result:result});
+    //   }).catch(function (err) { return handleError(res, err); });
+    // }).catch(function (err) { return handleError(res, err); });
   });
 };
+
 
 /**
  * Detach a tag from a dataset
@@ -265,10 +265,13 @@ exports.addTag = function(req,res) {
 exports.removeTag = function(req,res){
   console.log(req.params);
   if (req.params.id && req.params.tid) {
-    models.Dataset.find(req.params.id).then(function (dataset) {
+    models.Dataset.findById(req.params.id).then(function (dataset) {
       if (dataset) {
         models.Tag.find({where: { id:req.params.tid}}).then(function(tag){
           dataset.removeTag(tag).then(function() {
+
+            // delete tags with no connections
+
             return res.json({status: 'success'});
           });
         }).catch(function(err){
@@ -352,69 +355,56 @@ exports.destroyDistribution = function(req, res) {
   });
 };
 
-
-/*-------------- REFERENCES --------------------------------------------------------------*/
-exports.listReferences = function(req, res) {
-  console.log(req.params);
-  var id = req.params.id;
-  console.log(id);
-};
-
-exports.getReference = function(req,res){
-  console.log(req.params);
-};
-
-exports.createReference = function(req, res) {
-  var id = req.params.id;
-  var reference = req.body.reference;
-
-  // Find the dataset to attach the reference to
-  models.Dataset.find(id).then(function(dataset){
-    if (!dataset){ return handleError( res, { error:'Failed to load dataset' } ); }
-    // Create a db-entry for the reference
-    models.Reference.create(reference).then(function(reference){
-      // Add the reference to the dataset
-      dataset.addReference(reference).then(function(dataset){
-        res.json(dataset);
-      }).catch(function(err){
-        return handleError(res,err);
-      });
-    }).catch(function(err){
-      return handleError(res,err);
-    });
-  }).catch(function(err){
-    return handleError(res,err);
-  });
-};
-
-exports.updateReference = function(req, res) { };
-
 /**
- * Delete a source attached to a dataset
- **/
-exports.destroyReference = function(req, res) {
+ * @api {get} /dataset/:id/registry/:rid Update dataset registry status
+ * @apiName UpdateDatasetRegistry
+ * @apiGroup Dataset
+ * @apiVersion 2.0.0
+ *
+ * @apiSuccess {Object} Array with dataset_registry object.
+ *
+ * @apiSuccessExample Success-Response:
+ *     HTTP/1.1 200 OK
+ *    [{
+ *       "title": "Dataset title"
+ *    }]
+ */
+exports.updateRegistry = function(req,res){
+  console.log('update dataset registry');
 
-  var rid = req.params.rid;
-  models.Reference.find(rid).then(function(reference){
-    console.log('reference', reference);
-    if(reference){
-      reference.destroy().then(function(){
-        console.log('deleted');
-        res.json({status:'success'});
+  // get registries for this dataset
+  models.dataset_registries.find({
+    where: {
+      dataset_id: req.params.id,
+      registry_id: req.params.rid
+    }
+  }).then(function(registry){
+    if (!registry){
+      models.dataset_registries.create({
+        dataset_id: req.params.id,
+        registry_id: req.params.rid,
+        status: req.body.status
+      }).then(function(result){
+        console.log(result.dataValues);
+        return res.json(result);
       }).catch(function(err){
         handleError(res,err);
-      });
+      })
     } else {
-      res.json(reference);
+      registry.updateAttributes({
+        status: req.body.status
+      }).then(function(result){
+        return res.json(result);
+      }).catch(function(err){
+        handleerror(res,err);
+      });
     }
-  }).catch(function(err){
-    handleError(res,err);
   });
-};
+}
 
 
 
 function handleError(res, err) {
-  console.log('Dataset error,', err);
+  console.log('Dataset controller error,', err);
   return res.status(500).json({status:'error', msg:err});
 }

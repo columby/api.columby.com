@@ -4,7 +4,7 @@
  * Dependencies
  *
  */
-var config = require('../config/environment/index'),
+var config = require('../config/config'),
     AWS = require('aws-sdk'),
     models = require('../models/index'),
     request = require('request'),

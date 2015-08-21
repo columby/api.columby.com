@@ -1,6 +1,8 @@
 'use strict';
 
-var fs = require('fs');
+var fs = require('fs'),
+path=require('path');
+
 
 module.exports = function(app) {
 
@@ -10,9 +12,12 @@ module.exports = function(app) {
     require('./' + name + '.routes')(app);
   });
 
+  app.route('/').get(function(req,res){
+    return res.json({statusCode: 200, msg:'Columby API'});
+  });
+
   app.route('/*')
     .get(function(req,res){
       return res.json({status: 'not found'});
     });
 };
-

@@ -6,55 +6,41 @@
  *
  * @type {exports}
  */
-var config = require('../config/environment/index'),
+var config = require('../config/config'),
     jwt    = require('jwt-simple'),
     moment = require('moment'),
-    models = require('../models/index')
-;
-
-
-
-/**
- *
- * Generate JSON Web Token
- *
- */
-exports.createToken = function(user) {
-  console.log('jwt user', user.id);
-  var payload = {
-    sub: user.id,
-    iat: moment().unix(),
-    exp: moment().add(14, 'days').unix()
-  };
-  console.log('payload', payload);
-  return jwt.encode(payload, config.jwt.secret);
-};
+    models = require('../models/index'),
+    request = require('request'),
+    userCtrl = require('./user.controller'),
+    tokenCtrl = require('./token.controller');
 
 
 /**
  *
  * Check if a user's jwt token is present
- * And add the user id to req
+ * Validate the token if present
+ * And add the contents to req.
  *
  */
-exports.checkJWT = function(req,res,next){
-  console.log('checking jwt');
-  if (!req.user) { req.user={}; }
+exports.validateJWT = function(req,res,next){
+  console.log('Validating JWT.');
 
+  req.jwt = req.jwt || {};
   // Decode the token if present
   if (req.headers.authorization){
-    console.log('header', req.headers.authorization);
     var token = req.headers.authorization.split(' ')[1];
-    console.log('token', token);
-    var payload = jwt.decode(token, config.jwt.secret);
-    console.log('payload', payload);
-    // Check token expiration date
-    if (payload.exp <= moment().unix()) {
-      console.log('Token has expired');
+    var payload = {
+      exp:null,
+      sub:null
+    };
+    try {
+      payload = jwt.decode(token, config.jwt.secret);
+    } catch (err){
+
     }
-    // Attach user id to req
-    if (!payload.sub) {
-      console.log('No user found from token');
+    // Check token expiration date
+    if ( (payload.exp) && (payload.exp <= moment().unix()) ) {
+      return res.json({status: 'error', message: 'Token has expired'});
     }
     req.jwt = payload;
   }
@@ -62,51 +48,150 @@ exports.checkJWT = function(req,res,next){
   next();
 };
 
+
 /**
  *
- * Login Required Middleware
+ * Validate the user from the JWT token
  *
  */
-exports.ensureAuthenticated = function(req, res, next) {
+exports.validateUser = function(req,res,next) {
 
-  if (!req.user) { req.user={}; }
+  req.user = req.user || {};
 
-  // Check for authorization header
-  if (!req.headers.authorization) {
-    return res.send({status: 'error', message: 'Please make sure your request has an Authorization header'});
-  }
-  // Decode the token
-  var token = req.headers.authorization.split(' ')[1];
-  var payload = jwt.decode(token, config.jwt.secret);
-  // Check token expiration date
-  if (payload.exp <= moment().unix()) {
-    return res.send({status: 'error', message: 'Token has expired'});
-  }
+  // fetch user if not present and JWT is present
+  if ( (!req.user.id) && (req.jwt.sub) ) {
+    models.User.find({
+      where: { id: req.jwt.sub },
+      include: [ { model: models.Account, as: 'account' } ]
+    }).then(function(user){
 
-  // Attach user_id to req
-  if (!payload.sub) {
-    return res.send({status: 'error', message: 'No user found from token'});
+      // transform user
+      var u = user.dataValues;
+      u.organisations = [];
+      for (var i=0; i<user.account.length; i++) {
+        var a = user.account[ i].dataValues;
+        a.role = a.UserAccounts.dataValues.role;
+        delete a.UserAccounts;
+        if (a.primary) {
+          u.primary = a;
+        } else {
+          u.organisations.push(a);
+        }
+      }
+      delete u.account;
+
+      req.user = u;
+
+      next();
+    });
+  } else {
+    next();
   }
-  req.jwt = payload;
-  next();
 };
 
+// Validate if a user is logged in
+exports.ensureAuthenticated = function(req,res,next) {
+  if (req.user && req.user.id){
+    next();
+  } else {
+    return res.json({status: 'error', message: 'Not authenticated'});
+  }
+}
+
 
 /**
- *
- * Admin required middleware
- *
- * Validate if a user has admin rights
- */
-exports.isAdmin = function(req,res,next) {
-  models.User.find(req.user.id).then(function(user){
-    if (user && (user.roles.indexOf('admin') !== -1)) {
-      req.user = user;
-      next();
-    } else {
-      res.status(401).json('Administers only.');
-    }
-  }).catch(function(err){
-    res.json(err);
+ * Login using google provider
+ **/
+exports.google = function(req, res) {
+
+  console.log(req.body);
+  // flag to register a new user or not
+  var registration = req.body.register;
+  console.log('reg', registration);
+
+  var accessTokenUrl = 'https://accounts.google.com/o/oauth2/token';
+  var peopleApiUrl = 'https://www.googleapis.com/plus/v1/people/me/openIdConnect';
+  var params = {
+    code: req.body.code,
+    client_id: req.body.clientId,
+    client_secret: config.oauth.googleSecret,
+    redirect_uri: req.body.redirectUri,
+    grant_type: 'authorization_code'
+  };
+
+  console.log('Requesting google account details', params);
+
+  // Step 1. Exchange authorization code for access token.
+  request.post(accessTokenUrl, { json: true, form: params }, function(err, response, token) {
+    var accessToken = token.access_token;
+    var headers = { Authorization: 'Bearer ' + accessToken };
+
+    // Step 2. Retrieve profile information about the current user.
+    request.get({ url: peopleApiUrl, headers: headers, json: true }, function(err, response, profile) {
+
+      // handle errors
+      if (err) { return res.json({status: 'error', msg: err}); }
+      if (profile.error){ return res.json({status:'error', msg: profile.error.message}); }
+
+      // Check if user already exists in database
+      console.log('Checking for existing user with email: ' + profile.email + ' And provider id: ' + profile.sub);
+
+      userCtrl.getUserByEmail(profile.email, function(response){
+
+        var user = response.user;
+
+        // Handle error
+        if (response.error) {
+          console.log(response.error);
+          return res.status(400).json({ status: 'error', msg: response.error });
+        }
+
+        // Handle a valid user login
+        if (user && user.id && (user.provider === 'google') ) {
+          // valid user found, send back user and JWT
+          var token = tokenCtrl.createToken(user);
+          return res.json({ user:user,token:token});
+        }
+
+        // Handle an existing user with the wrong provider
+        if (user && user.id && (user.provider !== 'google') ) {
+          return res.status(400).json({
+            status: 'warning',
+            statusCode: '100',
+            msg: 'Your email address ' + profile.email + ' is registered, but not connected to Google. Please login with the following provider: ' + user.provider
+          });
+        }
+
+        console.log(registration);
+        // handle user not found and no registration
+        if ( (!user || !user.id) && (registration==='false') ) {
+          return res.status(400).json({
+            status: 'warning',
+            statusCode: '100',
+            msg: 'The email address ' + profile.email + ' is not registered at Columby, please register for a new account first. '
+          });
+        }
+
+        // handle registration of a new user
+        if ( (!user || !user.id) && (registration==='true') ) {
+          console.log('No existing user, creating a new one');
+          userCtrl.createUser({
+            provider: 'google',
+            providerId: profile.sub,
+            email: profile.email,
+            //picture: profile.picture.replace('sz=50', 'sz=200'),
+            account: {
+              displayName: profile.name
+            }
+          }, function(user) {
+            var u = user.dataValues;
+            u.primary = user.primary;
+            u.organisations = [];
+            var token = tokenCtrl.createToken(user);
+            return res.json({ user: u, token: token });
+          });
+        }
+      });
+    });
   });
 };

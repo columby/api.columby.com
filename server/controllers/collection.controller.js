@@ -5,13 +5,10 @@ var _ = require('lodash'),
 
 // Get list of collections
 exports.index = function(req, res) {
-  models.Collection
-    .find({})
-    .populate('datasets', 'title')
-    .populate('account', 'name')
-    .exec(function (err, collections) {
-    if(err) { return handleError(res, err); }
-    return res.json(200, collections);
+  models.Collection.findAll().then(function(models){
+    return res.json(models);
+  }).catch(function(err){
+    return res.json(err);
   });
 };
 

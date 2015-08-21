@@ -7,7 +7,7 @@
  */
 var models = require('../models/index'),
   pg = require('pg'),
-  config = require('../config/environment');
+  config = require('../config/config');
 
 
 /*-------------- PRIMARY DISTRIBUTION --------------------------------------------------------*/

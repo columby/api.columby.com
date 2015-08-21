@@ -3,44 +3,49 @@
 var express = require('express'),
     controller = require('./../controllers/file.controller'),
     auth = require('./../controllers/auth.controller'),
+    perm = require('./../permissions/file.permission'),
     router = express.Router();
 
 
 module.exports = function(app) {
 
-  router.get('/sign',
+  router.post('/sign',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.sign);
+    perm.canUpload,
+    controller.sign
+  );
 
-  router.post('/s3success',
+  router.post('/finish-upload',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.handleS3Success);
-
-  //router.get('/createDerivative',
-  //  controller.createDerivative);
+    controller.finishUpload
+  );
 
   router.get('/',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
     controller.index);
 
   router.get('/:id',
     controller.show);
 
-  router.post('/',
-    auth.ensureAuthenticated,
-    // check upload limit
-    // validate upload space
-    // upload using multer middleware
-    
-    // finishUpload
-      controller.create);
-
   router.put('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.update);
+    perm.canUpdate,
+    controller.update);
 
   router.delete('/:id',
+    auth.validateJWT,
+    auth.validateUser,
     auth.ensureAuthenticated,
-      controller.destroy);
+    perm.canDelete,
+    controller.delete);
 
   app.use('/v2/file', router);
 };
