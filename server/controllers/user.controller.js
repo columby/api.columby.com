@@ -39,11 +39,13 @@ function getUser(userId, cb){
   console.log(('getUser with id: ' + userId));
   models.User.find({
     where: { id: userId },
-    include:
-      [{ model: models.Account, as: 'account', include:
-        [{ model: models.File, as: 'avatar'}]
-      }]
-    }).then(function(user) {
+    include:[
+      { model: models.Account, as: 'account', include:
+        [ { model: models.File, as: 'avatar' } ]
+      },
+      { model: models.File, as: 'avatar'}
+    ]
+  }).then(function(user) {
       transformAccounts(user, function(user){
         cb(user);
       })
@@ -77,6 +79,7 @@ function getUser(userId, cb){
  *     }
  */
 exports.me = function(req, res) {
+  console.log(config);
   getUser(req.jwt.sub, function(user){
     return res.json(user);
   });
@@ -313,13 +316,15 @@ exports.delete = function(req, res) {
     if (!user) {
       return res.json({
         status: 'not_found',
-        msg: 'The requested user with email ' + req.body.email + ' was not found.'
+        msg: 'The requested user with email ' + req.body.email + ' was not found.',
+        token: null
       });
     } else if (user.provider !== 'email') {
       return res.json({
         status: 'wrong_provider',
         msg: 'The user with email address ' + req.body.email + ' is connected to Columby using ' + user.provider + '. Please login using this provider. ',
-        provider: user.provider
+        provider: user.provider,
+        token:null
       });
     } else {
       // create a new logintoken

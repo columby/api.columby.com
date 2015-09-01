@@ -73,19 +73,37 @@ exports.index = function(req, res) {
  *
  */
 exports.show = function(req, res) {
-  models.Tag.find({
+  var limit = req.query.limit || 10;
+  if (limit > 50) { limit = 50; }
+  var offset = req.query.offset || 0;
+  var order = req.query.order || 'created_at DESC';
+  var filter = {};
+
+  // filter by account id if provided
+  if (req.query.account_id){
+    filter.account_id = req.query.account_id;
+  }
+  models.Tag.findOne({
     where: {
       slug: req.params.slug
-    },
-    include: [{
-      model: models.Dataset,
-      as: 'tags'}]
-    }).then(function(tag){
-
-    // add datasets
-
-    res.json(tag);
-  }).catch(function(err){
+    }
+  }).then(function(tag) {
+    if (!tag) { return res.json(tag); }
+    // get datasets
+    tag.getDatasets({
+      limit:limit,
+      offset:offset,
+      filter:filter,
+      include: [{
+        model:models.Account, as:'account'
+      }]
+    }).then(function(datasets){
+      console.log(tag);
+      tag.dataValues.datasets = datasets;
+      return res.json(tag);
+    });
+  }).catch(function(err) {
+    console.log(err);
     return handleError(res,err);
   });
 };
@@ -124,5 +142,5 @@ exports.create = function(req,res){
 
 function handleError(res, err) {
   console.log('Vocabulary controller error: ',err);
-  return res.send(500, err);
+  return res.send({status:'error', msg:err});
 }
