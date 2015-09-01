@@ -42,8 +42,7 @@ function getUser(userId, cb){
     include:[
       { model: models.Account, as: 'account', include:
         [ { model: models.File, as: 'avatar' } ]
-      },
-      { model: models.File, as: 'avatar'}
+      }
     ]
   }).then(function(user) {
       transformAccounts(user, function(user){
