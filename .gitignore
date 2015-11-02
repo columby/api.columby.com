@@ -11,3 +11,4 @@ dist
 env.js
 /server/config/scribe.htpasswd
 /bower_components/
+*.bts

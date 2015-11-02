@@ -1,7 +1,7 @@
 'use strict';
 
 var models = require('../models/index');
-
+var sequelize = models.sequelize;
 
 function slugify(text) {
   return text.toString().toLowerCase()
@@ -33,8 +33,6 @@ exports.findOrCreateTag = function(tag, cb){
 
 
 exports.index = function(req, res) {
-  console.log('index tags', req.query);
-  console.log(req.params);
   var filter = {};
   if (req.query.tagId){
     filter.id= req.query.tagId
@@ -54,9 +52,15 @@ exports.index = function(req, res) {
     });
   }
 
-  models.Tag.findAll({
+  var limit = req.query.limit || 10;
+  if (limit > 50) { limit = 50; }
+  var offset = req.query.offset || 0;
+
+  models.Tag.findAndCountAll({
     where: filter,
-    include: include
+    limit: limit,
+    offset: offset,
+    order: 'created_at DESC',
   }).then(function(models) {
     return res.json(models);
   }).catch(function(err){
@@ -83,29 +87,54 @@ exports.show = function(req, res) {
   if (req.query.account_id){
     filter.account_id = req.query.account_id;
   }
+
   models.Tag.findOne({
     where: {
       slug: req.params.slug
     }
   }).then(function(tag) {
     if (!tag) { return res.json(tag); }
-    // get datasets
-    tag.getDatasets({
-      limit:limit,
-      offset:offset,
-      filter:filter,
-      include: [{
-        model:models.Account, as:'account'
-      }]
-    }).then(function(datasets){
-      console.log(tag);
-      tag.dataValues.datasets = datasets;
-      return res.json(tag);
+
+    // Get tag id from tag.slug query input
+    //var sql = 'SELECT t.id FROM "Tags" as t WHERE t.slug = :slug';
+    // models.sequelize.query(sql,
+    //   { replacements: { slug: req.params.slug }, type: models.sequelize.QueryTypes.SELECT }
+    // ).then(function(result) {
+    //   console.log(result);
+    //   if (result.length <1) { return res.json({}); }
+      // Get dataset count for this tag
+      // var tagId = result[0].id;
+      var sql = 'SELECT count(dt.dataset_id) FROM dataset_tags as dt WHERE dt.tag_id = ' + tag.id;
+      models.sequelize.query(sql).then(function(result){
+        var count = result[0][0].count;
+
+        // get datasets
+        tag.getDatasets({
+          limit:limit,
+          offset:offset,
+          filter:filter,
+          include: [{
+            model:models.Account, as:'account'
+          }]
+        }).then(function(datasets){
+          tag.dataValues.hits = {
+            datasets: {
+              count: count,
+              rows: datasets
+            }
+          };
+          return res.json(tag);
+        });
+      }).catch(function(err){
+        console.log(err);
+      });
     });
-  }).catch(function(err) {
-    console.log(err);
-    return handleError(res,err);
-  });
+
+
+  // }).catch(function(err) {
+  //   console.log(err);
+  //   return handleError(res,err);
+  // });
 };
 
 

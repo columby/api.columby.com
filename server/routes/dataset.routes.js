@@ -63,6 +63,20 @@ module.exports = function(app){
     datasetPerms.canEdit,
     datasetCtrl.removeTag);
 
+  // Dataset categories routes
+  router.post('/:id/category',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    datasetPerms.canEdit,
+    datasetCtrl.addCategory);
+
+  router.delete('/:id/category/:cid',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    datasetPerms.canEdit,
+    datasetCtrl.removeCategory);
 
   // Distribution Routes
   router.get('/:id/distribution',

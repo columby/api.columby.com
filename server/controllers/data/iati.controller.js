@@ -2,7 +2,7 @@
 
 var pg = require('pg'),
     escape = require('pg-escape'),
-    config = require('../config/config');
+    config = require('../../config/config');
 
 
 exports.query = function(req,res){

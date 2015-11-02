@@ -124,8 +124,11 @@ exports.show = function(req, res) {
     if (!dataset) { return res.json(dataset); }
     dataset.getRegistries().then(function(result){
       dataset.dataValues.registries = result;
-      req.dataset = dataset;
-      return res.json(dataset);
+      dataset.getCategories().then(function(result){
+        dataset.dataValues.categories = result;
+        req.dataset = dataset;
+        return res.json(dataset);
+      });
     });
   }).catch(function(err){
     return handleError(res, err);
@@ -287,6 +290,60 @@ exports.removeTag = function(req,res){
     return handleError(res, {error: 'Missing id.'});
   }
 };
+
+
+/*-------------- CATEGORIES ---------------------------------------------------------------*/
+
+/**
+ * Create and add a category to a dataset
+ */
+exports.addCategory = function(req,res) {
+  models.Category.findById(req.body.category.id).then(function(category){
+    if (!category) { return handleError(res, 'Category not found'); }
+    // add category to dataset
+    req.dataset.addCategory(category).then(function(result){
+      // update dataset count for this category
+      category.count++;
+      category.save();
+      return res.json(category);
+    }).catch(function(err){
+      return handleError(res,err);
+    });
+  });
+};
+
+
+/**
+ * Detach a tag from a dataset
+ */
+exports.removeCategory = function(req,res){
+  if (req.params.id && req.params.cid) {
+    models.Dataset.findById(req.params.id).then(function (dataset) {
+      if (dataset) {
+        models.Category.find({where: { id:req.params.cid}}).then(function(category){
+          dataset.removeCategory(category).then(function() {
+            category.count--;
+            if (category.count<0) { category.count=0; }
+            category.save();
+            return res.json({status: 'success'});
+          }).catch(function(err){
+            return handleError(res,err);
+          });
+        }).catch(function(err){
+          return handleError(res,err);
+        });
+      } else {
+        return res.json(dataset);
+      }
+    }).catch(function (err) {
+      return handleError(res, err);
+    })
+  } else {
+    return handleError(res, {error: 'Missing id.'});
+  }
+};
+
+
 
 
 /*-------------- DISTRIBUTIONS ---------------------------------------------------------------*/

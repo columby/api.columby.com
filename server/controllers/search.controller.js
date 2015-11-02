@@ -3,17 +3,19 @@
 var config = require('../config/config'),
     Dataset = require('../models/index').Dataset,
     Account = require('../models/index').Account,
-    Sequelize = require('sequelize')
-;
+    Sequelize = require('sequelize');
+
 
 
 // Get list of searchs
 exports.search = function(req, res) {
+
   if (!req.query.query) {
     handleError(res, 'error, no query provided');
   }
 
   var q = req.query.query;
+
   var limit = req.query.limit || 50;
   if (limit>50) { limit=50; }
 
@@ -134,6 +136,21 @@ exports.search = function(req, res) {
   }).catch(function(err){
     return handleError(res,err);
   });
+}
+
+
+function searchDatasets(cb){
+
+}
+
+
+function searchAccounts(cb){
+
+}
+
+
+function searchTags(cb){
+
 }
 
 
