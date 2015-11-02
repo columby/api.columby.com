@@ -39,7 +39,7 @@
           // Tag can belong to many datasets (many to many)
           Tag.belongsToMany(models.Dataset,{
             through: 'dataset_tags',
-            as:'tags'
+            as:'datasets'
           });
           models.Dataset.belongsToMany(Tag,{
             through: 'dataset_tags',

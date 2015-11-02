@@ -15,7 +15,7 @@ var models = require('../models/index');
 exports.index = function(req, res) {
   // Define WHERE clauses
   var filter = {
-    private: false
+    
   };
   // Set (default) limit
   var limit = req.query.limit || 10;
@@ -73,38 +73,75 @@ exports.show = function(req, res) {
       ]}
     ]
   }).then(function(account) {
-
-    account.getRegistries().then(function(registries){
-
-      var a = {
-        id: account.dataValues.id,
-        shortid: account.dataValues.shortId,
-        displayName: account.dataValues.displayName,
-        slug: account.dataValues.slug,
-        email: account.dataValues.email,
-        description: account.dataValues.description,
-        primary: account.dataValues.primary,
-        contact: account.dataValues.contact,
-        url: account.dataValues.url,
-        location: account.dataValues.location,
-        avatar: account.avatar,
-        headerImg: account.headerImg,
-        files: account.files,
-        people: []
+    account.getCategories().then(function(categories){
+      // restructure categories
+      var c=[];
+      for(var i=0;i<categories.length;i++){
+        if (categories[i].dataValues.parent_id===null){
+          var _c=categories[ i].dataValues;
+          _c.children = [];
+          c.push(_c);
+          //delete categories[ i];
+        }
       }
+      //console.log(c);
+      // console.log(categories.length);
+      // console.log(categories[ 0]);
 
-      for (var i=0; i<account.users.length;i++){
-        var u = account.users[ i].dataValues.account[0].dataValues;
-        u.role = account.users[ i].UserAccounts.dataValues.role;
-        delete u.UserAccounts;
-        delete u.plan;
-        delete u.uuid;
-        a.people.push(u);
+      for(var i=0;i<categories.length;i++){
+      //  console.log(categories);
+        if (categories[i].dataValues.parent_id !== null){
+          //console.log(categories[i].dataValues.parent_id);
+
+          var selected;
+          for (var k=0; k<c.length; k++){
+
+            if (c[ k].id===categories[i].dataValues.parent_id){
+              selected=k;
+              //console.log('ppp', k);
+            }
+          }
+          //console.log(c[ selected]);
+          c[ selected].children.push(categories[ i].dataValues);
+        }
       }
+      //console.log(c);
 
-      a.registries = registries;
+      account.categories = c;
 
-      return res.json(a);
+      account.getRegistries().then(function(registries){
+
+        var a = {
+          id: account.dataValues.id,
+          shortid: account.dataValues.shortId,
+          displayName: account.dataValues.displayName,
+          slug: account.dataValues.slug,
+          email: account.dataValues.email,
+          description: account.dataValues.description,
+          primary: account.dataValues.primary,
+          contact: account.dataValues.contact,
+          url: account.dataValues.url,
+          location: account.dataValues.location,
+          avatar: account.avatar,
+          headerImg: account.headerImg,
+          files: account.files,
+          people: [],
+          categories: account.categories
+        }
+
+        for (var i=0; i<account.users.length;i++){
+          var u = account.users[ i].dataValues.account[0].dataValues;
+          u.role = account.users[ i].UserAccounts.dataValues.role;
+          delete u.UserAccounts;
+          delete u.plan;
+          delete u.uuid;
+          a.people.push(u);
+        }
+
+        a.registries = registries;
+
+        return res.json(a);
+      });
     });
   }).catch(function(err){
     console.log('err', err);
@@ -235,6 +272,93 @@ exports.updateRegistry = function(req,res){
   });
 }
 
+
+var accountId;          // account_id for new category
+var categories;         // Object with all categories and subcategory array
+var categoryCounter=0;  // Counter for current category to be added
+var category;           // Object with current category
+var parentId;         // id for saved parent category (used as parent_id for subcategory)
+exports.addDefaultCategories = function(req,res){
+  var data = req.body;
+  if (!req.body.standard) {
+    return res.json({status:'error', message: 'Missing required parameter {standard}'});
+  } else if (req.body.standard !== 'overheid-nl') {
+    return res.json({status:'error', message: 'Standard not known'});
+  } else if (req.body.standard === 'overheid-nl') {
+    categories = require('../standards/overheid-nl-themas');
+    accountId = req.params.id;
+    categoryCounter=0;
+    addCategories(function(result){
+      console.log('done');
+      res.json({status:'success'});
+    });
+  }
+}
+
+function addCategories(cb){
+  var listLength = Object.keys(categories).length;
+  console.log('Number of categories: ' + listLength);
+  console.log('CategoryCounter: ' + categoryCounter);
+  category = Object.keys(categories)[ categoryCounter];
+  console.log('Sending category: ', category);
+
+  addCategory(function(){
+    console.log('Finished adding category ' + categoryCounter);
+    categoryCounter++;
+    if(categoryCounter<listLength){
+      console.log('There are more categories to process ' + categoryCounter + ' of ' + listLength);
+      addCategories(cb)
+    } else {
+      console.log('Done adding Categories');
+      cb('done');
+    }
+  });
+}
+
+var subCategoryCounter = 0;
+var subCategory;
+function addCategory(cb){
+  console.log('adding category: ', category);
+  models.Category.create({
+    account_id: accountId,
+    name: category
+  }).then(function(result){
+    console.log('Category created: ' + result.dataValues.id);
+    parentId = result.dataValues.id;
+    console.log('Subcategories: ', categories[category]);
+    if (categories[category].length>0){
+      subCategory=categories[ category];
+      console.log('adding sub-category: ', subCategory);
+      addSubCategory(function(){
+        console.log('Finished adding subcategories for category');
+        cb();
+      });
+    } else {
+      console.log('No subcategories');
+      cb();
+    }
+  });
+}
+
+function addSubCategory(cb) {
+  console.log('subCategoryCounter' + subCategoryCounter);
+  console.log('subCategory length: ' + subCategory.length);
+  if (subCategoryCounter<subCategory.length){
+    console.log('adding subcategory ', subCategory[ subCategoryCounter]);
+    models.Category.create({
+      account_id: accountId,
+      name: subCategory[ subCategoryCounter],
+      parent_id: parentId
+    }).then(function(result){
+      console.log('Subcategory created: ' + result.dataValues.id);
+      subCategoryCounter++
+      addSubCategory(cb);
+    });
+  } else {
+    subCategoryCounter=0;
+    cb();
+  }
+}
 
 
 // Error handler

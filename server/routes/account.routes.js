@@ -10,7 +10,6 @@ var express = require('express'),
 
 module.exports = function(app) {
 
-
   router.get('/',
     auth.validateJWT,
     controller.index
@@ -29,7 +28,6 @@ module.exports = function(app) {
     permission.canCreate,
     controller.create
   );
-
 
   router.post('/:id/addFile',
     auth.validateJWT,
@@ -55,5 +53,14 @@ module.exports = function(app) {
     controller.updateRegistry
   );
 
+  router.post('/:id/defaultcategories',
+    auth.validateJWT,
+    auth.validateUser,
+    auth.ensureAuthenticated,
+    permission.canEdit,
+    controller.addDefaultCategories
+  );
+
   app.use('/v2/account', router);
+
 };

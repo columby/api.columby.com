@@ -1,6 +1,6 @@
 {
   "name": "columby-api",
-  "version": "2.0.2",
+  "version": "1.2.0",
   "main": "server/server.js",
   "apidoc": {
     "title": "Columby API documentation",
@@ -25,6 +25,7 @@
     "http-auth": "^2.2.8",
     "jwt-simple": "0.3.0",
     "knox": "^0.9.2",
+    "limiter": "^1.0.5",
     "lodash": "3.10.0",
     "mandrill-api": "1.0.45",
     "method-override": "2.3.4",

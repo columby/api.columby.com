@@ -81,7 +81,6 @@ exports.validateUser = function(req,res,next) {
       delete u.account;
 
       req.user = u;
-
       next();
     });
   } else {
